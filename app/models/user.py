@@ -15,7 +15,7 @@ class User(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     
-    # Add this line inside User class
     transactions = relationship("Transaction", back_populates="user")
+    savings_goals = relationship("SavingsGoal", back_populates="user")
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, name={self.name})>"

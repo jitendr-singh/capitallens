@@ -9,7 +9,7 @@ from app.routes import auth
 # from app.routes import transactions
 from app.routes.transaction import router as transactions_router
 from app.routes.analytics import router as analytics_router
-
+from app.routes.savings import router as savings_router
 
 # Setup logging
 logging.basicConfig(
@@ -20,6 +20,32 @@ logger = logging.getLogger(__name__)
 
 # Create tables
 Base.metadata.create_all(bind=engine)
+
+def seed_default_user():
+    from app.config.database import SessionLocal
+    from app.models.user import User
+    from app.utils.security import get_password_hash
+
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.email == "executive@capitallens.com").first()
+        if not user:
+            logger.info("Creating default executive guest user...")
+            new_user = User(
+                email="executive@capitallens.com",
+                name="Executive Officer",
+                password_hash=get_password_hash("password")
+            )
+            db.add(new_user)
+            db.commit()
+            logger.info("Default executive guest user created successfully.")
+    except Exception as e:
+        logger.error(f"Failed to seed default user: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+seed_default_user()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,6 +69,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(transactions_router, prefix="/api/v1")
 app.include_router(analytics_router, prefix="/api/v1")
+app.include_router(savings_router, prefix="/api/v1")
 
 @app.get("/health")
 async def health_check():
