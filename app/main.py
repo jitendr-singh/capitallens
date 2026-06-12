@@ -10,6 +10,7 @@ from app.routes import auth
 from app.routes.transaction import router as transactions_router
 from app.routes.analytics import router as analytics_router
 from app.routes.savings import router as savings_router
+from app.routes.investment import router as investment_router
 
 # Setup logging
 logging.basicConfig(
@@ -70,6 +71,7 @@ app.include_router(auth.router, prefix="/api/v1")
 app.include_router(transactions_router, prefix="/api/v1")
 app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(savings_router, prefix="/api/v1")
+app.include_router(investment_router, prefix="/api/v1")
 
 @app.get("/health")
 async def health_check():

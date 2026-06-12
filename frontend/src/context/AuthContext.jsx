@@ -37,8 +37,16 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
 
-    initAuth();
+    // Safety timeout: if backend is slow/down, never block UI forever (3 seconds max)
+    const timeout = setTimeout(() => {
+      console.warn('[AuthContext] Init timed out after 3s — using guest session fallback.');
+      setUser({ id: 1, email: 'guest@capitallens.com', name: 'Executive Officer' });
+      setLoading(false);
+    }, 3000);
+
+    initAuth().finally(() => clearTimeout(timeout));
   }, []);
+
 
   const login = async (email, password) => {
     setLoading(true);

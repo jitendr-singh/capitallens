@@ -11,6 +11,7 @@ import TransactionsManager from './components/TransactionsManager';
 import AnalyticsTab from './components/AnalyticsTab';
 import SmartSavingsAlert from './components/SmartSavingsAlert';
 import SavingsTab from './components/SavingsTab';
+import Investments from './components/Investments';
 import { analyticsService, savingsService } from './services/api';
 
 export default function App() {
@@ -267,6 +268,8 @@ export default function App() {
           <TransactionsManager />
         ) : activeTab === 'savings' ? (
           <SavingsTab goals={savingsGoals} onRefresh={fetchDashboardData} />
+        ) : activeTab === 'investments' ? (
+          <Investments />
         ) : (
           /* Placeholder for other tab actions */
           <div className="midnight-glass p-8 rounded-xl text-center min-h-[300px] flex flex-col items-center justify-center gap-4">

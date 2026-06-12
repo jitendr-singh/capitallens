@@ -7,7 +7,7 @@ export default function Sidebar({ isOpen, onClose, activeTab, setActiveTab }) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
     { id: 'analytics', label: 'Analytics', icon: 'monitoring' },
-    { id: 'portfolio', label: 'Portfolio', icon: 'account_balance_wallet' },
+    { id: 'investments', label: 'Investments', icon: 'trending_up' },
     { id: 'transactions', label: 'Transactions', icon: 'receipt_long' },
     { id: 'savings', label: 'Savings Goals', icon: 'savings' },
     { id: 'settings', label: 'Settings', icon: 'settings' },

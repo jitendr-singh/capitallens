@@ -134,3 +134,9 @@ body {
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
+.blur-back {
+  filter: blur(8px);
+  pointer-events: none;
+  transition: filter 0.3s ease;
+}
+

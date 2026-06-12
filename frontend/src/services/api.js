@@ -22,14 +22,21 @@ const getHeaders = () => {
 
 // Generic Fetch Wrapper with Fallback Support
 async function request(endpoint, options = {}, mockData = null) {
+  // Abort after 20s to prevent hanging indefinitely (live yfinance fetches can take 5-10s)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
+      signal: controller.signal,
       headers: {
         ...getHeaders(),
         ...options.headers,
       },
     });
+
+    clearTimeout(timeoutId);
 
     if (response.status === 401) {
       // Automatic logout on unauthorized
@@ -43,6 +50,7 @@ async function request(endpoint, options = {}, mockData = null) {
 
     return await response.json();
   } catch (error) {
+    clearTimeout(timeoutId);
     console.warn(`[API Client Warning] Failed fetching ${endpoint}, using high-fidelity mockup data.`, error);
     if (mockData !== null) {
       return mockData;
@@ -50,6 +58,7 @@ async function request(endpoint, options = {}, mockData = null) {
     throw error;
   }
 }
+
 
 // ─── AUTH SERVICES ──────────────────────────────────────────────────────────
 export const authService = {
@@ -59,13 +68,19 @@ export const authService = {
       formData.append('username', username);
       formData.append('password', password);
 
+      // 4-second timeout — fall back to guest if backend unreachable
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 4000);
+
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: formData,
       });
+      clearTimeout(tid);
 
       if (!response.ok) {
         throw new Error('Authentication failed');
@@ -471,5 +486,90 @@ export const transactionService = {
     return request(`/transactions/${txnId}`, {
       method: 'DELETE'
     });
+  }
+};
+
+// ─── INVESTMENT SERVICES ─────────────────────────────────────────────────────
+export const investmentService = {
+  getPortfolio: async () => {
+    return request('/investments/portfolio', {}, {
+      total_invested: 0.0,
+      current_value: 0.0,
+      total_profit_loss: 0.0,
+      profit_loss_percentage: 0.0,
+      total_monthly_rent: 0.0,
+      investments: []
+    });
+  },
+
+  getSuggestions: async () => {
+    return request('/investments/suggestions', {}, {
+      available_cash: 0.0,
+      savings_rate: 0.0,
+      suggestions: []
+    });
+  },
+
+  create: async (data) => {
+    return request('/investments', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  redeem: async (id) => {
+    return request(`/investments/${id}/redeem`, {
+      method: 'POST'
+    });
+  },
+
+  update: async (id, data) => {
+    return request(`/investments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  /**
+   * Import holdings from a CAS PDF file.
+   * @param {File} file - PDF file object
+   * @param {string|null} password - PDF password (PAN+DOB format for CAMS)
+   * @param {boolean} autoSave - If true, automatically save parsed holdings
+   */
+  importCAS: async (file, password = null, autoSave = false) => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('file', file);
+    if (password) formData.append('password', password);
+    formData.append('auto_save', String(autoSave));
+
+    const response = await fetch(`${API_BASE_URL}/investments/import-cas`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        // Do NOT set Content-Type; browser sets it automatically with boundary for multipart
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: 'CAS import failed' }));
+      throw new Error(err.detail || 'CAS import failed');
+    }
+    return response.json();
+  },
+
+  /**
+   * Fetch real-time price for a stock/MF/gold asset.
+   * @param {string} assetType - "stocks" | "mutual_funds" | "gold"
+   * @param {string} assetName - NSE ticker / fund name / any for gold
+   * @param {number|null} quantity
+   * @param {number|null} buyPrice
+   */
+  getLivePrice: async (assetType, assetName, quantity = null, buyPrice = null) => {
+    const params = new URLSearchParams({ asset_type: assetType, asset_name: assetName });
+    if (quantity) params.append('quantity', quantity);
+    if (buyPrice) params.append('buy_price', buyPrice);
+    return request(`/investments/live-price?${params.toString()}`, {});
   }
 };
