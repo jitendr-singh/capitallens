@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService, setAuthToken } from '../services/api';
+import { authService, setAuthToken, setUnauthorizedCallback } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -9,6 +9,12 @@ export const AuthProvider = ({ children }) => {
 
   // Check if user has token and load profile
   useEffect(() => {
+    // Register the 401 logout callback
+    setUnauthorizedCallback(() => {
+      console.warn('[AuthContext] 401 Unauthorized detected, logging out user.');
+      setUser(null);
+    });
+
     const initAuth = async () => {
       const token = localStorage.getItem('capitallens_token');
       if (token) {
@@ -16,31 +22,20 @@ export const AuthProvider = ({ children }) => {
           const profile = await authService.getCurrentUser();
           setUser(profile);
         } catch (error) {
-          console.warn('Session init failed, logging out and logging in guest.');
+          console.warn('Session init failed, clearing token.');
           setAuthToken(null);
-          try {
-            const guestSession = await authService.login('executive@capitallens.com', 'password');
-            setUser(guestSession.user);
-          } catch (err) {
-            setUser({ id: 1, email: 'guest@capitallens.com', name: 'Executive Officer' });
-          }
+          setUser(null);
         }
       } else {
-        // Auto-login Guest session for instant premium showcase without login barriers
-        try {
-          const guestSession = await authService.login('executive@capitallens.com', 'password');
-          setUser(guestSession.user);
-        } catch (err) {
-          setUser({ id: 1, email: 'guest@capitallens.com', name: 'Executive Officer' });
-        }
+        setUser(null);
       }
       setLoading(false);
     };
 
-    // Safety timeout: if backend is slow/down, never block UI forever (3 seconds max)
+    // Safety timeout: if backend is slow/down, resolve loading state
     const timeout = setTimeout(() => {
-      console.warn('[AuthContext] Init timed out after 3s — using guest session fallback.');
-      setUser({ id: 1, email: 'guest@capitallens.com', name: 'Executive Officer' });
+      console.warn('[AuthContext] Init timed out after 3s.');
+      setUser(null);
       setLoading(false);
     }, 3000);
 

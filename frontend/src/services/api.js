@@ -12,6 +12,11 @@ export const setAuthToken = (token) => {
   }
 };
 
+let unauthorizedCallback = null;
+export const setUnauthorizedCallback = (cb) => {
+  unauthorizedCallback = cb;
+};
+
 const getHeaders = () => {
   const token = getAuthToken();
   return {
@@ -41,6 +46,9 @@ async function request(endpoint, options = {}, mockData = null) {
     if (response.status === 401) {
       // Automatic logout on unauthorized
       setAuthToken(null);
+      if (unauthorizedCallback) {
+        unauthorizedCallback();
+      }
     }
 
     if (!response.ok) {
@@ -571,5 +579,21 @@ export const investmentService = {
     if (quantity) params.append('quantity', quantity);
     if (buyPrice) params.append('buy_price', buyPrice);
     return request(`/investments/live-price?${params.toString()}`, {});
+  }
+};
+
+// ─── AI CHAT SERVICES ────────────────────────────────────────────────────────
+export const aiChatService = {
+  sendMessage: async (message, activeTab, chatHistory) => {
+    return request('/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        message,
+        active_tab: activeTab,
+        chat_history: chatHistory
+      })
+    }, {
+      response: "Aapka system offline hai, par main aapko bata sakta hoon ki aapki financial command configuration bilkul active hai! Please backend connect karein full advice ke liye."
+    });
   }
 };

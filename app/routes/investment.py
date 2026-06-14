@@ -139,6 +139,8 @@ async def get_portfolio(
 
 # ─── GET AI RECOMMENDATIONS ─────────────────────────────────────────────────
 
+# ─── GET AI RECOMMENDATIONS ─────────────────────────────────────────────────
+
 @router.get("/investments/suggestions")
 async def get_suggestions(
     db: Session = Depends(get_db),
@@ -164,28 +166,176 @@ async def get_suggestions(
         Investment.status == InvestmentStatus.active
     ).scalar() or 0.0
 
-    available_cash = max(0.0, total_savings - active_investment_sum)
+    # 1. Income stability detection (Salaried vs Freelance)
+    # Query income transactions in the last 6 months to check regular monthly income
+    now = datetime.utcnow()
+    six_months_ago = now - timedelta(days=180)
+    income_txs = db.query(Transaction).filter(
+        Transaction.user_id == current_user.id,
+        Transaction.type == TransactionType.income,
+        Transaction.date >= six_months_ago
+    ).all()
+    
+    # Check frequency of income transactions
+    months_with_income = set()
+    for tx in income_txs:
+        months_with_income.add(tx.date.strftime("%Y-%m"))
+    
+    if len(months_with_income) >= 2 or (total_income == 0):
+        income_stability = "Salaried"
+        stability_points = 30
+    else:
+        income_stability = "Freelance"
+        stability_points = 10
 
-    # Determine Emergency Fund Safety
+    # Calculate average monthly expense (burn rate) for runway/emergency calculations
+    first_txn_date = db.query(func.min(Transaction.date)).filter(
+        Transaction.user_id == current_user.id
+    ).scalar()
+    
+    if first_txn_date:
+        months_diff = (now.year - first_txn_date.year) * 12 + (now.month - first_txn_date.month) + 1
+        avg_monthly_exp = total_expense / max(months_diff, 1)
+    else:
+        avg_monthly_exp = 0.0
+
+    this_month_start = datetime(now.year, now.month, 1)
+    this_month_exp = db.query(func.sum(Transaction.amount)).filter(
+        Transaction.user_id == current_user.id,
+        Transaction.type == TransactionType.expense,
+        Transaction.date >= this_month_start
+    ).scalar() or 0.0
+    
+    monthly_expense = this_month_exp if this_month_exp > 0 else avg_monthly_exp
+    if monthly_expense <= 0:
+        monthly_expense = total_expense if total_expense > 0 else 0.0
+
+    # Determine Emergency Fund Target
     from app.models.savings import SavingsGoal
     emergency_goals = db.query(SavingsGoal).filter(
         SavingsGoal.user_id == current_user.id,
         SavingsGoal.title.ilike("%emergency%")
     ).all()
     
-    emergency_safe = False
     if emergency_goals:
+        emergency_target = sum(g.target_amount for g in emergency_goals)
         total_emergency_saved = sum(g.saved_amount for g in emergency_goals)
-        total_emergency_target = sum(g.target_amount for g in emergency_goals)
-        if total_emergency_saved >= total_emergency_target or (total_expense > 0 and total_emergency_saved >= 3 * total_expense):
-            emergency_safe = True
+        emergency_gap = max(0.0, emergency_target - total_emergency_saved)
     else:
-        if total_expense > 0:
-            if total_savings >= 3 * total_expense:
-                emergency_safe = True
-        else:
-            if total_savings > 0:
-                emergency_safe = True
+        # Default: 3 months of expenses (safety first, minimum ₹15,000)
+        emergency_target = max(15000.0, monthly_expense * 3)
+        emergency_gap = max(0.0, emergency_target - total_savings)
+
+    # Calculate runway months
+    runway_months = round(total_savings / monthly_expense, 1) if monthly_expense > 0 else (99.0 if total_savings > 0 else 0.0)
+    runway_months = max(0.0, runway_months)
+
+    # 2. Risk Score calculation (0-100)
+    risk_score = 0
+    risk_score += stability_points
+    
+    # Savings Rate points
+    if savings_rate > 50:
+        risk_score += 25
+    elif savings_rate >= 20:
+        risk_score += 15
+    else:
+        risk_score += 5
+        
+    # Runway points (since target is now 3 months, >3 months gives +25, 1.5-3m gives +15, <1.5m gives 0)
+    if runway_months > 3:
+        risk_score += 25
+    elif runway_months >= 1.5:
+        risk_score += 15
+    else:
+        risk_score += 0
+        
+    # Existing Investments points
+    active_investments_count = db.query(Investment).filter(
+        Investment.user_id == current_user.id,
+        Investment.status == InvestmentStatus.active
+    ).count()
+    
+    if active_investments_count > 0:
+        risk_score += 20
+    else:
+        risk_score += 10
+        
+    # Risk Profile assignment
+    if risk_score <= 30:
+        risk_profile = "Conservative"
+    elif risk_score <= 60:
+        risk_profile = "Moderate"
+    else:
+        risk_profile = "Aggressive"
+
+    # 3. Capping investable surplus based on runway safety thresholds
+    unallocated_cash = max(0.0, total_savings - active_investment_sum)
+    warning_message = None
+    
+    if runway_months < 1.5:
+        # Critical warning & tight cap: 15% of savings, max 20,000
+        safe_cap = max(0.0, min(total_savings * 0.15, 20000.0))
+        safe_cap = round(safe_cap / 100.0) * 100.0
+        available_cash = min(unallocated_cash, safe_cap)
+        
+        warning_message = (
+            f"Build your Emergency Fund first! Your financial runway is only {runway_months:.1f} months "
+            f"(target 3 months: ₹{emergency_target:,.0f}). For safety, we capped your investable surplus "
+            f"to ₹{available_cash:,.0f}."
+        )
+    elif total_savings < emergency_target:
+        # Partial warning & moderate cap: total savings minus half of emergency target
+        safe_cap = max(0.0, total_savings - (emergency_target / 2))
+        safe_cap = round(safe_cap / 100.0) * 100.0
+        available_cash = min(unallocated_cash, safe_cap)
+        
+        warning_message = (
+            f"Your Emergency Fund is incomplete. Target is ₹{emergency_target:,.0f}, currently at ₹{total_savings:,.0f}. "
+            f"For safety, we capped your investable surplus to ₹{available_cash:,.0f}."
+        )
+    else:
+        available_cash = unallocated_cash
+
+    # 4. Diversification & Concentration Checks
+    active_investments = db.query(Investment).filter(
+        Investment.user_id == current_user.id,
+        Investment.status == InvestmentStatus.active
+    ).all()
+    
+    total_portfolio_value = sum(inv.amount_invested for inv in active_investments)
+    portfolio_distribution = {}
+    for inv in active_investments:
+        portfolio_distribution[inv.asset_type] = portfolio_distribution.get(inv.asset_type, 0.0) + inv.amount_invested
+        
+    portfolio_warnings = []
+    has_equity = False
+    has_debt = False
+    has_gold = False
+    
+    if total_portfolio_value > 0:
+        for asset_type, amount in portfolio_distribution.items():
+            pct = (amount / total_portfolio_value) * 100
+            if pct > 40:
+                portfolio_warnings.append(
+                    f"Single asset class '{asset_type.replace('_', ' ').title()}' occupies {pct:.0f}% of your portfolio (ideal cap: 40%). "
+                    "Consider allocating new investments to other categories."
+                )
+            if asset_type in ["stocks", "mutual_funds"]:
+                has_equity = True
+            if asset_type in ["fixed_deposit", "govt_schemes"]:
+                has_debt = True
+            if asset_type == "gold":
+                has_gold = True
+                
+        if not has_equity:
+            portfolio_warnings.append("No equity exposure detected. Consider starting with a low-cost Index Mutual Fund.")
+        if not has_debt:
+            portfolio_warnings.append("No stable debt/fixed-income instruments (FD/PPF) found. Consider adding some to balance your portfolio.")
+        if not has_gold:
+            portfolio_warnings.append("No gold allocation found. Consider adding gold (up to 10%) as a hedge against inflation.")
+    else:
+        portfolio_warnings.append("No active investments tracked yet. We recommend starting with small, safe allocations.")
 
     # Call Gemini AI Suggester with full profile context
     suggestions = generate_investment_suggestions(
@@ -193,7 +343,13 @@ async def get_suggestions(
         savings_rate=savings_rate,
         total_income=total_income,
         total_expense=total_expense,
-        total_savings=total_savings
+        total_savings=total_savings,
+        runway_months=runway_months,
+        risk_score=risk_score,
+        risk_profile=risk_profile,
+        emergency_target=emergency_target,
+        emergency_gap=emergency_gap,
+        portfolio_warnings=portfolio_warnings
     )
     return {
         "available_cash": round(available_cash, 2),
@@ -201,7 +357,14 @@ async def get_suggestions(
         "total_income": round(total_income, 2),
         "total_expense": round(total_expense, 2),
         "total_savings": round(total_savings, 2),
-        "emergency_fund_status": "Safe" if emergency_safe else "Building",
+        "emergency_fund_status": "Safe" if (runway_months >= 3.0 and total_savings >= emergency_target) else "Building",
+        "risk_score": risk_score,
+        "risk_profile": risk_profile,
+        "runway_months": runway_months,
+        "emergency_fund_target": round(emergency_target, 2),
+        "emergency_gap": round(emergency_gap, 2),
+        "warning_message": warning_message,
+        "portfolio_warnings": portfolio_warnings,
         "suggestions": suggestions
     }
 

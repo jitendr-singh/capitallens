@@ -84,6 +84,13 @@ export default function Investments() {
   const [totalExpense, setTotalExpense] = useState(0.0);
   const [totalSavings, setTotalSavings] = useState(0.0);
   const [emergencyFundStatus, setEmergencyFundStatus] = useState('Building');
+  const [riskScore, setRiskScore] = useState(50);
+  const [riskProfile, setRiskProfile] = useState('Moderate');
+  const [runwayMonths, setRunwayMonths] = useState(0.0);
+  const [emergencyFundTarget, setEmergencyFundTarget] = useState(0.0);
+  const [emergencyGap, setEmergencyGap] = useState(0.0);
+  const [warningMessage, setWarningMessage] = useState(null);
+  const [portfolioWarnings, setPortfolioWarnings] = useState([]);
   
   // Modal / Form States
   const [modalOpen, setModalOpen] = useState(false);
@@ -172,6 +179,13 @@ export default function Investments() {
         setTotalExpense(sData.total_expense || 0.0);
         setTotalSavings(sData.total_savings || 0.0);
         setEmergencyFundStatus(sData.emergency_fund_status || 'Building');
+        setRiskScore(sData.risk_score !== undefined ? sData.risk_score : 50);
+        setRiskProfile(sData.risk_profile || 'Moderate');
+        setRunwayMonths(sData.runway_months !== undefined ? sData.runway_months : 0.0);
+        setEmergencyFundTarget(sData.emergency_fund_target || 0.0);
+        setEmergencyGap(sData.emergency_gap || 0.0);
+        setWarningMessage(sData.warning_message || null);
+        setPortfolioWarnings(sData.portfolio_warnings || []);
       }
     } catch (err) {
       console.error('Failed to load AI suggestions:', err);
@@ -913,96 +927,173 @@ export default function Investments() {
               <p className="text-xs text-on-surface-variant tracking-wider">CALCULATING INVESTMENT OPTIMIZATIONS...</p>
             </div>
           ) : suggestions.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {suggestions.map((sug, idx) => {
-                const isHigh = sug.risk_level === 'High';
-                const isMed = sug.risk_level === 'Medium';
-                
-                let cardBorder = 'border-primary/20';
-                let riskText = 'text-primary bg-primary/10';
-                if (isHigh) {
-                  cardBorder = 'border-rose-expense/30';
-                  riskText = 'text-rose-expense bg-rose-expense/10';
-                } else if (isMed) {
-                  cardBorder = 'border-amber-400/20';
-                  riskText = 'text-amber-400 bg-amber-400/10';
-                }
-
-                const meta = getAssetMeta(sug.asset_type);
-                const cardMatchScore = (() => {
-                  let score = 88;
-                  if (savingsRate > 50) score += 4;
-                  else if (savingsRate < 20) score -= 6;
-                  
-                  if (emergencyFundStatus === 'Safe') score += 3;
-                  else score -= 4;
-
-                  if (sug.risk_level === 'Low' && savingsRate < 30) score += 3;
-                  if (sug.risk_level === 'High' && savingsRate > 40) score += 2;
-                  
-                  return Math.min(98, Math.max(78, score));
-                })();
-
-                return (
-                  <div key={idx} className={`p-4 rounded-xl border bg-gradient-to-br from-[#0e1624]/60 to-[#0b0f19]/30 hover:shadow-[0_8px_24px_rgba(0,0,0,0.15)] transition-all duration-300 flex flex-col justify-between relative overflow-hidden group hover:-translate-y-0.5 ${cardBorder}`}>
-                    
-                    {/* Top edge glow overlay */}
-                    <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    
-                    <div>
-                      {/* Asset Header Info */}
-                      <div className="flex flex-col gap-2 mb-3 border-b border-glass-border/20 pb-3">
-                        {/* Row 1: Icon & Asset Class only */}
-                        <div className="flex items-center gap-1.5 w-full">
-                          <span className={`material-symbols-outlined text-[13px] p-1 rounded-md border flex items-center justify-center flex-shrink-0 ${meta.colorClass}`}>
-                            {meta.icon}
-                          </span>
-                          <span className="text-xs font-bold text-text-primary whitespace-nowrap">
-                            {meta.label}
-                          </span>
-                        </div>
-                        {/* Row 2: Match Score (left) & Risk Badge (right) */}
-                        <div className="flex items-center justify-between w-full mt-1">
-                          <div className="flex items-center gap-1 text-[10px] text-primary font-bold">
-                            <span className="material-symbols-outlined text-[12px] text-primary font-bold flex items-center justify-center">verified</span>
-                            <span>{cardMatchScore}% Match</span>
-                          </div>
-                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${riskText}`}>
-                            {sug.risk_level} Risk
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* Asset Name */}
-                      <h4 className="font-bold text-sm text-text-primary tracking-tight mb-2 group-hover:text-primary transition-colors font-headline">
-                        {sug.asset_name}
-                      </h4>
-                      
-                      {/* Why it's best (Short Rationale Summary) */}
-                      <p className="text-xs text-on-surface-variant/80 leading-relaxed mb-4">
-                        <span className="text-primary font-bold">Why it's best: </span>
-                        {Array.isArray(sug.allocation_rationale) ? sug.allocation_rationale[0] : (sug.rationale || sug.allocation_rationale)}
-                      </p>
-                    </div>
-                    
-                    {/* Action Block */}
-                    <div className="mt-auto space-y-2">
-                      <div className="flex justify-between items-center text-[10px] px-1 text-on-surface-variant/65 font-semibold">
-                        <span>Recommended:</span>
-                        <span className="text-text-primary font-bold font-outfit">{formatCurrency(sug.recommended_allocation, 0)}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickExecute(sug)}
-                        className="w-full py-2 bg-surface-variant/20 hover:bg-primary hover:text-on-primary border border-glass-border/50 hover:border-transparent rounded-lg font-bold text-[10px] tracking-wider transition-all flex items-center justify-center gap-1 group-hover:bg-primary group-hover:text-on-primary group-hover:border-transparent"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">insights</span>
-                        Configure & Invest
-                      </button>
-                    </div>
+            <div className="flex flex-col gap-4 flex-1">
+              {/* Safety Warning Banner */}
+              {warningMessage && (
+                <div className={`p-3.5 rounded-xl border flex items-start gap-3 text-xs leading-relaxed backdrop-blur-md ${
+                  runwayMonths < 1.5 
+                    ? 'bg-rose-500/5 border-rose-500/30 text-rose-200' 
+                    : 'bg-amber-500/5 border-amber-500/30 text-amber-200'
+                }`}>
+                  <span className={`material-symbols-outlined text-[18px] mt-0.5 flex-shrink-0 ${
+                    runwayMonths < 1.5 ? 'text-rose-400' : 'text-amber-400'
+                  }`}>
+                    {runwayMonths < 1.5 ? 'gpp_maybe' : 'info'}
+                  </span>
+                  <div className="flex-1">
+                    <span className="font-bold block mb-0.5">
+                      {runwayMonths < 1.5 ? 'Safety Alert: Low Emergency Buffer' : 'Notice: Complete Emergency Target'}
+                    </span>
+                    <span>{warningMessage}</span>
                   </div>
-                );
-              })}
+                </div>
+              )}
+
+              {/* Financial Health Summary Widget */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#0d1527]/30 border border-glass-border/30 p-3 rounded-xl w-full">
+                {/* Metric 1: Risk Profile */}
+                <div className="flex flex-col gap-0.5 border-r border-glass-border/20 last:border-0 pr-2 last:pr-0">
+                  <span className="text-[9px] font-bold text-on-surface-variant/50 uppercase tracking-wider">Risk Profile</span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className={`w-2 h-2 rounded-full ${
+                      riskProfile === 'Conservative' ? 'bg-[#10b981]' : riskProfile === 'Moderate' ? 'bg-[#f59e0b]' : 'bg-[#6366f1]'
+                    }`}></div>
+                    <span className="text-xs font-bold text-text-primary">{riskProfile}</span>
+                  </div>
+                </div>
+
+                {/* Metric 2: Risk Score */}
+                <div className="flex flex-col gap-0.5 border-r border-glass-border/20 last:border-0 pr-2 last:pr-0">
+                  <span className="text-[9px] font-bold text-on-surface-variant/50 uppercase tracking-wider">Risk Score</span>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-xs font-bold text-text-primary">{riskScore}</span>
+                    <span className="text-[9px] text-on-surface-variant/50">/100</span>
+                  </div>
+                </div>
+
+                {/* Metric 3: Runway */}
+                <div className="flex flex-col gap-0.5 border-r border-glass-border/20 last:border-0 pr-2 last:pr-0">
+                  <span className="text-[9px] font-bold text-on-surface-variant/50 uppercase tracking-wider">Runway</span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-xs font-bold text-text-primary">{runwayMonths} Months</span>
+                  </div>
+                </div>
+
+                {/* Metric 4: Target / Gap */}
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-bold text-on-surface-variant/50 uppercase tracking-wider">Emergency Gap</span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className={`text-xs font-bold ${emergencyGap > 0 ? 'text-[#f43f5e]' : 'text-[#10b981]'}`}>
+                      {emergencyGap > 0 ? `₹${emergencyGap.toLocaleString('en-IN')}` : 'Built ✅'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Portfolio Concentration Alerts (if any) */}
+              {portfolioWarnings.length > 0 && (
+                <div className="flex flex-col gap-1.5 border border-amber-500/10 bg-amber-500/2 p-2.5 rounded-lg w-full">
+                  {portfolioWarnings.map((warn, wIdx) => (
+                    <div key={wIdx} className="flex items-center gap-2 text-[10px] text-amber-200/90 font-medium">
+                      <span className="material-symbols-outlined text-[12px] text-amber-400">warning</span>
+                      <span>{warn}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Suggestions Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                {suggestions.map((sug, idx) => {
+                  const isHigh = sug.risk_level === 'High';
+                  const isMed = sug.risk_level === 'Medium';
+                  
+                  let cardBorder = 'border-primary/20';
+                  let riskText = 'text-primary bg-primary/10';
+                  if (isHigh) {
+                    cardBorder = 'border-rose-expense/30';
+                    riskText = 'text-rose-expense bg-rose-expense/10';
+                  } else if (isMed) {
+                    cardBorder = 'border-amber-400/20';
+                    riskText = 'text-amber-400 bg-amber-400/10';
+                  }
+
+                  const meta = getAssetMeta(sug.asset_type);
+                  const cardMatchScore = (() => {
+                    let score = 88;
+                    if (savingsRate > 50) score += 4;
+                    else if (savingsRate < 20) score -= 6;
+                    
+                    if (emergencyFundStatus === 'Safe') score += 3;
+                    else score -= 4;
+
+                    if (sug.risk_level === 'Low' && savingsRate < 30) score += 3;
+                    if (sug.risk_level === 'High' && savingsRate > 40) score += 2;
+                    
+                    return Math.min(98, Math.max(78, score));
+                  })();
+
+                  return (
+                    <div key={idx} className={`p-4 rounded-xl border bg-gradient-to-br from-[#0e1624]/60 to-[#0b0f19]/30 hover:shadow-[0_8px_24px_rgba(0,0,0,0.15)] transition-all duration-300 flex flex-col justify-between relative overflow-hidden group hover:-translate-y-0.5 ${cardBorder}`}>
+                      
+                      {/* Top edge glow overlay */}
+                      <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      <div>
+                        {/* Asset Header Info */}
+                        <div className="flex flex-col gap-2 mb-3 border-b border-glass-border/20 pb-3">
+                          {/* Row 1: Icon & Asset Class only */}
+                          <div className="flex items-center gap-1.5 w-full">
+                            <span className={`material-symbols-outlined text-[13px] p-1 rounded-md border flex items-center justify-center flex-shrink-0 ${meta.colorClass}`}>
+                              {meta.icon}
+                            </span>
+                            <span className="text-xs font-bold text-text-primary whitespace-nowrap">
+                              {meta.label}
+                            </span>
+                          </div>
+                          {/* Row 2: Match Score (left) & Risk Badge (right) */}
+                          <div className="flex items-center justify-between w-full mt-1">
+                            <div className="flex items-center gap-1 text-[10px] text-primary font-bold">
+                              <span className="material-symbols-outlined text-[12px] text-primary font-bold flex items-center justify-center">verified</span>
+                              <span>{cardMatchScore}% Match</span>
+                            </div>
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${riskText}`}>
+                              {sug.risk_level} Risk
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Asset Name */}
+                        <h4 className="font-bold text-sm text-text-primary tracking-tight mb-2 group-hover:text-primary transition-colors font-headline">
+                          {sug.asset_name}
+                        </h4>
+                        
+                        {/* Why it's best (Short Rationale Summary) */}
+                        <p className="text-xs text-on-surface-variant/80 leading-relaxed mb-4">
+                          <span className="text-primary font-bold">Why it's best: </span>
+                          {Array.isArray(sug.allocation_rationale) ? sug.allocation_rationale[0] : (sug.rationale || sug.allocation_rationale)}
+                        </p>
+                      </div>
+                      
+                      {/* Action Block */}
+                      <div className="mt-auto space-y-2">
+                        <div className="flex justify-between items-center text-[10px] px-1 text-on-surface-variant/65 font-semibold">
+                          <span>Recommended:</span>
+                          <span className="text-text-primary font-bold font-outfit">{formatCurrency(sug.recommended_allocation, 0)}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickExecute(sug)}
+                          className="w-full py-2 bg-surface-variant/20 hover:bg-primary hover:text-on-primary border border-glass-border/50 hover:border-transparent rounded-lg font-bold text-[10px] tracking-wider transition-all flex items-center justify-center gap-1 group-hover:bg-primary group-hover:text-on-primary group-hover:border-transparent"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">insights</span>
+                          Configure & Invest
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center text-on-surface-variant/60 gap-3 py-10">

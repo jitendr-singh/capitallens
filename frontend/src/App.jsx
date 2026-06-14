@@ -12,14 +12,18 @@ import AnalyticsTab from './components/AnalyticsTab';
 import SmartSavingsAlert from './components/SmartSavingsAlert';
 import SavingsTab from './components/SavingsTab';
 import Investments from './components/Investments';
+import ChatAssistant from './components/ChatAssistant';
+import AuthPage from './components/AuthPage';
+import LandingPage from './components/LandingPage';
 import { analyticsService, savingsService } from './services/api';
 
 export default function App() {
-  const { loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   
   // Layout States
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [showAuth, setShowAuth] = useState(false);
 
   // Dashboard Data States
   const [summaryData, setSummaryData] = useState(null);
@@ -182,6 +186,14 @@ export default function App() {
     );
   }
 
+  // Redirect to Auth or Landing screen if not logged in
+  if (!user) {
+    if (showAuth) {
+      return <AuthPage onBackToLanding={() => setShowAuth(false)} />;
+    }
+    return <LandingPage onEnterConsole={() => setShowAuth(true)} />;
+  }
+
   return (
     <div className="font-body-base text-body-base bg-[#030712] text-[#dde2f3] min-h-screen relative overflow-x-hidden">
       {/* Ambient Background Elements */}
@@ -289,6 +301,7 @@ export default function App() {
           </div>
         )}
       </main>
+      <ChatAssistant activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 }
