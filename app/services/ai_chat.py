@@ -425,7 +425,8 @@ def generate_local_fallback_response(query: str, active_tab: str, data: dict, db
 
     # Command: /invest or "invest" or "portfolio" or "allocation"
     if "/invest" in query_lower or "invest" in query_lower or "portfolio" in query_lower or "allocation" in query_lower:
-        available_cash = max(0.0, savings - invested)
+        locked_savings = sum(g.get('saved_amount', 0.0) for g in goals)
+        available_cash = max(0.0, savings - locked_savings)
         portfolio_text = ""
         if investments:
             portfolio_text = "\n".join([f"\u2022 **{inv['asset_name']}** ({inv['asset_type']}): ₹{inv['amount_invested']:,.2f}" for inv in investments])

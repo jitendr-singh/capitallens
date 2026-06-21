@@ -737,7 +737,7 @@ export default function AnalyticsTab({ searchQuery }) {
             )}
             {showSavings && (
               <div className="flex items-center gap-1.5">
-                <div className="w-5 h-0.5 rounded-full" style={{ background: '#5af0b3' }} />
+                <div className="w-5 h-0.5" style={{ backgroundImage: 'linear-gradient(to right, #5af0b3 50%, transparent 50%)', backgroundSize: '6px 100%' }} />
                 <span className="text-[10px] font-bold text-text-secondary/60 uppercase tracking-wide">Savings</span>
               </div>
             )}
@@ -800,8 +800,8 @@ export default function AnalyticsTab({ searchQuery }) {
                       {/* Expense curve (Rose/Pink) */}
                       {expensePath && <path d={expensePath} fill="none" stroke="#fb7185" strokeWidth="2.5" />}
 
-                      {/* Savings curve (Green) */}
-                      {savingsPath && <path d={savingsPath} fill="none" stroke="#5af0b3" strokeWidth="2.5" />}
+                      {/* Savings curve (Green, dashed to show overlapping data points) */}
+                      {savingsPath && <path d={savingsPath} fill="none" stroke="#5af0b3" strokeWidth="2.5" strokeDasharray="6 4" />}
 
                       {/* Hover Line */}
                       {hoveredIndex !== null && incomePoints[hoveredIndex] && (

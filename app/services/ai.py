@@ -44,7 +44,7 @@ def generate_investment_suggestions(
     - Savings Rate: {savings_rate:.1f}%
     - Available cash to invest (Safety-Capped Investable Amount): {available_cash:.2f}
     - Financial Runway: {runway_months:.1f} months
-    - Emergency Fund Target (6 months expenses): {emergency_target:.2f}
+    - Emergency Fund Target: {emergency_target:.2f}
     - Emergency Fund Gap: {emergency_gap:.2f}
     - Programmatic Risk Score: {risk_score:.0f}/100 (Profile: {risk_profile})
     - Portfolio Concentration/Diversification Warnings: {", ".join(portfolio_warnings) if portfolio_warnings else "None"}
@@ -170,30 +170,29 @@ def get_mock_suggestions(
                 }
             },
             {
-                "asset_name": "UTI Nifty 50 Index Fund",
-                "asset_type": "mutual_funds",
+                "asset_name": "Post Office Time Deposit",
+                "asset_type": "govt_schemes",
                 "risk_level": "Low",
-                "risk_score": 3,
-                "expected_return_rate": 12.0,
+                "risk_score": 1,
+                "expected_return_rate": 6.9,
                 "recommended_allocation": max(0.0, rec_index),
                 "allocation_rationale": [
-                    "Moderate equity allocation added to provide a safety buffer for your profile.",
-                    "Low expense ratio allows maximum returns on core compounding.",
-                    "India's economic growth captured in 50 largest blue-chip companies."
+                    "Government-backed scheme offering guaranteed fixed returns.",
+                    "Provides 100% capital protection for your savings.",
+                    "Ideal for building a safe emergency reserve buffer."
                 ],
-                "holding_period": "5+ Years",
-                "pros": ["Low-cost index diversification", "SEBI regulated security", "Consistent 12-13% historical compounding"],
-                "cons": ["Market volatility risk in short term", "Subject to capital gains tax", "No outperformance of market average"],
-                "risk_protection": ["Spread across 50 top Indian companies", "Daily liquidity tracking", "Fully regulated by SEBI"],
+                "holding_period": "1-3 Years",
+                "pros": ["Sovereign safety guarantee", "Fixed predictable returns", "Tax benefits under Section 80C"],
+                "cons": ["Cannot beat high inflation", "Lacks active capital growth", "Premature withdrawal penalty applies"],
+                "risk_protection": ["Backed by Government of India", "Zero market correlation", "Guaranteed interest payment"],
                 "liquidity": "Yes",
-                "ticker": "NIFTY50",
+                "ticker": "POST-OFFICE-TD",
                 "historical_data": {
-                    "current_price": 24500.0,
-                    "periods": {
-                        "1": 23200.0,
-                        "3": 18600.0,
-                        "5": 15700.0,
-                        "10": 8100.0
+                    "interest_rates": {
+                        "1": 6.9,
+                        "3": 7.0,
+                        "5": 7.5,
+                        "10": 7.8
                     }
                 }
             },
@@ -386,7 +385,7 @@ def get_mock_suggestions(
             },
             {
                 "asset_name": "Bitcoin (BTC)",
-                "asset_type": "stocks", # Asset types map to options, stocks fits crypto interface
+                "asset_type": "crypto",
                 "risk_level": "High",
                 "risk_score": 9,
                 "expected_return_rate": 35.0,

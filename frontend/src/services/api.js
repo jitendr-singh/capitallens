@@ -27,17 +27,21 @@ const getHeaders = () => {
 
 // Generic Fetch Wrapper with Fallback Support
 async function request(endpoint, options = {}, mockData = null) {
-  // Abort after 20s to prevent hanging indefinitely (live yfinance fetches can take 5-10s)
+  // Abort after custom timeout or default to 60s to prevent hanging indefinitely (live yfinance fetches can take 5-10s)
+  const timeoutMs = options.timeout || 60000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  // Extract timeout option to prevent forwarding it to fetch
+  const { timeout, ...fetchOptions } = options;
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
+      ...fetchOptions,
       signal: controller.signal,
       headers: {
         ...getHeaders(),
-        ...options.headers,
+        ...fetchOptions.headers,
       },
     });
 
@@ -519,7 +523,7 @@ export const transactionService = {
 // ─── INVESTMENT SERVICES ─────────────────────────────────────────────────────
 export const investmentService = {
   getPortfolio: async () => {
-    return request('/investments/portfolio', {}, {
+    return request('/investments/portfolio', { timeout: 60000 }, {
       total_invested: 0.0,
       current_value: 0.0,
       total_profit_loss: 0.0,
@@ -530,7 +534,7 @@ export const investmentService = {
   },
 
   getSuggestions: async () => {
-    return request('/investments/suggestions', {}, {
+    return request('/investments/suggestions', { timeout: 50000 }, {
       available_cash: 0.0,
       savings_rate: 0.0,
       suggestions: []
@@ -606,6 +610,7 @@ export const aiChatService = {
   sendMessage: async (message, activeTab, chatHistory) => {
     return request('/ai/chat', {
       method: 'POST',
+      timeout: 60000,
       body: JSON.stringify({
         message,
         active_tab: activeTab,

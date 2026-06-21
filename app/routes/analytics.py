@@ -136,6 +136,15 @@ async def get_summary(
 
     available_cash = total_savings - locked_savings
 
+    transaction_count = db.query(func.count(Transaction.id)).filter(
+        Transaction.user_id == current_user.id
+    ).scalar() or 0
+
+    this_month_txns = db.query(func.count(Transaction.id)).filter(
+        Transaction.user_id == current_user.id,
+        Transaction.date >= this_month_start
+    ).scalar() or 0
+
     return {
         "total_income": round(total_income, 2),
         "monthly_income": round(this_month_inc, 2),
@@ -149,7 +158,9 @@ async def get_summary(
         "burn_rate": round(this_month_exp, 2),
         "burn_rate_trend": burn_rate_trend,
         "runway_months": current_runway,
-        "runway_trend": runway_trend
+        "runway_trend": runway_trend,
+        "transaction_count": transaction_count,
+        "this_month_txns": this_month_txns
     }
 
 

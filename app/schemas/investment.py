@@ -16,6 +16,7 @@ class InvestmentCreate(BaseModel):
     asset_type: AssetType
     amount_invested: float
     current_value: Optional[float] = None
+    created_at: Optional[datetime] = None
     
     # Specific fields
     quantity: Optional[float] = None
@@ -30,6 +31,7 @@ class InvestmentUpdate(BaseModel):
     asset_name: Optional[str] = None
     amount_invested: Optional[float] = None
     current_value: Optional[float] = None
+    created_at: Optional[datetime] = None
     quantity: Optional[float] = None
     buy_price: Optional[float] = None
     interest_rate: Optional[float] = None

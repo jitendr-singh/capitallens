@@ -34,10 +34,10 @@ export const AuthProvider = ({ children }) => {
 
     // Safety timeout: if backend is slow/down, resolve loading state
     const timeout = setTimeout(() => {
-      console.warn('[AuthContext] Init timed out after 3s.');
+      console.warn('[AuthContext] Init timed out after 30s.');
       setUser(null);
       setLoading(false);
-    }, 3000);
+    }, 30000);
 
     initAuth().finally(() => clearTimeout(timeout));
   }, []);

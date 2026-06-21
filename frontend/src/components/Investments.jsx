@@ -12,6 +12,15 @@ const getAssetMeta = (type) => {
         glowColor: 'rgba(16, 185, 129, 0.15)',
         category: 'Equity'
       };
+    case 'crypto':
+    case 'cryptocurrency':
+      return {
+        icon: 'currency_bitcoin',
+        label: 'Cryptocurrency',
+        colorClass: 'text-[#f59e0b] bg-[#f59e0b]/10 border-[#f59e0b]/20',
+        glowColor: 'rgba(245, 158, 11, 0.15)',
+        category: 'Alternative'
+      };
     case 'mutual_funds':
       return {
         icon: 'query_stats',
@@ -104,7 +113,8 @@ export default function Investments({ searchQuery }) {
     maturity_date: '',
     annual_contribution: '',
     rental_income: '',
-    appreciation_rate: ''
+    appreciation_rate: '',
+    created_at: new Date().toISOString().split('T')[0]
   });
   const [errorMsg, setErrorMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -316,7 +326,8 @@ export default function Investments({ searchQuery }) {
       maturity_date: '',
       annual_contribution: '',
       rental_income: '',
-      appreciation_rate: ''
+      appreciation_rate: '',
+      created_at: new Date().toISOString().split('T')[0]
     });
     setErrorMsg('');
     setLivePriceData(null);
@@ -341,6 +352,10 @@ export default function Investments({ searchQuery }) {
         asset_type: selectedAssetType,
         amount_invested: principal
       };
+
+      if (formData.created_at) {
+        payload.created_at = new Date(formData.created_at).toISOString();
+      }
 
       if (selectedAssetType === 'stocks' || selectedAssetType === 'mutual_funds' || selectedAssetType === 'gold') {
         payload.quantity = parseFloat(formData.quantity) || 0;
@@ -418,13 +433,19 @@ export default function Investments({ searchQuery }) {
     // Auto-calculate quantity and buy price/NAV if stock/MF/gold
     let qty = '';
     let price = '';
-    if (type === 'stocks' || type === 'mutual_funds' || type === 'gold') {
-      qty = '1';
-      price = String(alloc);
+    if (type === 'stocks' || type === 'mutual_funds' || type === 'gold' || type === 'crypto' || type === 'cryptocurrency') {
+      const livePrice = sug.historical_data?.current_price || sug.current_price;
+      if (livePrice && livePrice > 0) {
+        price = String(livePrice);
+        qty = String((alloc / livePrice).toFixed(4));
+      } else {
+        qty = '1';
+        price = String(alloc);
+      }
     }
 
     setSyncFormData({
-      asset_name: sug.asset_name || '',
+      asset_name: sug.ticker || sug.asset_name || '',
       asset_type: type,
       amount_invested: String(alloc),
       quantity: qty,
@@ -917,7 +938,9 @@ export default function Investments({ searchQuery }) {
                 Recommended Opportunities
               </h3>
               <p className="text-xs text-on-surface-variant/70 mt-1">
-                Generated from your unallocated savings of {formatCurrency(availableCash)} ({savingsRate.toFixed(0)}% Savings Rate)
+                {emergencyFundTarget > 0 
+                  ? `Generated from your investable surplus of ${formatCurrency(availableCash)} (after reserving ${formatCurrency(emergencyFundTarget)} emergency buffer)`
+                  : `Generated from your investable surplus of ${formatCurrency(availableCash)} (${savingsRate.toFixed(0)}% Savings Rate)`}
               </p>
             </div>
             <button
@@ -1536,6 +1559,19 @@ export default function Investments({ searchQuery }) {
                     placeholder="0.00"
                     required
                     className="w-full bg-[#111827]/70 border border-glass-border/70 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-primary/50 transition-colors disabled:opacity-50"
+                  />
+                </div>
+
+                {/* Purchase Date Field */}
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-on-surface-variant block mb-1.5">Purchase Date</label>
+                  <input
+                    type="date"
+                    name="created_at"
+                    value={formData.created_at || ''}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full bg-[#111827]/70 border border-glass-border/70 rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-primary/50 transition-colors [color-scheme:dark]"
                   />
                 </div>
               </div>
@@ -2625,11 +2661,18 @@ export default function Investments({ searchQuery }) {
                             let qty = '';
                             let price = '';
                             if (type === 'stocks' || type === 'mutual_funds' || type === 'gold') {
-                              qty = '1';
-                              price = String(customAllocAmount);
+                              const livePrice = selectedSugVal.historical_data?.current_price || selectedSugVal.current_price;
+                              if (livePrice && livePrice > 0) {
+                                price = String(livePrice);
+                                qty = String((customAllocAmount / livePrice).toFixed(4));
+                              } else {
+                                qty = '1';
+                                price = String(customAllocAmount);
+                              }
                             }
                             setSyncFormData(prev => ({
                               ...prev,
+                              asset_name: selectedSugVal.ticker || selectedSugVal.asset_name || '',
                               amount_invested: String(customAllocAmount),
                               quantity: qty,
                               buy_price: price,

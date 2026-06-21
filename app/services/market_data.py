@@ -15,12 +15,17 @@ import logging
 from typing import Optional, Dict
 import time
 import re
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 # ── Cache (5-minute TTL) ──────────────────────────────────────────────────────
 _price_cache: Dict[str, tuple] = {}
 CACHE_TTL_SECONDS = 300
+
+# ── Historical Cache (10-minute TTL) ──────────────────────────────────────────
+_historical_cache: Dict[str, tuple] = {}
+HISTORICAL_CACHE_TTL_SECONDS = 600
 
 YF_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -104,6 +109,10 @@ def get_stock_price(ticker: str) -> Optional[float]:
     # Fallback: BSE
     if price is None:
         price = _fetch_yf_price(f"{base}.BO")
+        
+    # Fallback: Direct Symbol (supports US stocks like AAPL, crypto like BTC-USD)
+    if price is None:
+        price = _fetch_yf_price(base)
     
     if price:
         _set_cache(f"{base}.NS", price)
@@ -137,10 +146,11 @@ def get_mutual_fund_nav(scheme_code_or_name: str) -> Optional[float]:
             resp = requests.get(url, timeout=8)
             if resp.status_code == 200:
                 data = resp.json()
-                nav = float(data["data"][0]["nav"])
-                _set_cache(cache_key, nav)
-                logger.info(f"MF NAV: {scheme_code_or_name} = ₹{nav}")
-                return nav
+                if "data" in data and len(data["data"]) > 0:
+                    nav = float(data["data"][0]["nav"])
+                    _set_cache(cache_key, nav)
+                    logger.info(f"MF NAV: {scheme_code_or_name} = ₹{nav}")
+                    return nav
         
         # Name-based search
         search_url = "https://api.mfapi.in/mf/search"
@@ -152,10 +162,11 @@ def get_mutual_fund_nav(scheme_code_or_name: str) -> Optional[float]:
                 nav_resp = requests.get(f"{AMFI_API_URL}{scheme_code}", timeout=8)
                 if nav_resp.status_code == 200:
                     data = nav_resp.json()
-                    nav = float(data["data"][0]["nav"])
-                    _set_cache(cache_key, nav)
-                    logger.info(f"MF NAV by name '{scheme_code_or_name}' = ₹{nav}")
-                    return nav
+                    if "data" in data and len(data["data"]) > 0:
+                        nav = float(data["data"][0]["nav"])
+                        _set_cache(cache_key, nav)
+                        logger.info(f"MF NAV by name '{scheme_code_or_name}' = ₹{nav}")
+                        return nav
         
         return None
     except Exception as e:
@@ -205,10 +216,10 @@ def get_live_price(asset_type: str, asset_name: str) -> Optional[float]:
     Fetch live price for an asset based on type.
     
     Args:
-        asset_type: "stocks", "mutual_funds", or "gold"
+        asset_type: "stocks", "mutual_funds", "gold", "crypto" or "cryptocurrency"
         asset_name: NSE ticker / fund name+code / ignored for gold
     """
-    if asset_type == "stocks":
+    if asset_type == "stocks" or asset_type == "crypto" or asset_type == "cryptocurrency":
         return get_stock_price(asset_name)
     elif asset_type == "mutual_funds":
         return get_mutual_fund_nav(asset_name)
@@ -249,3 +260,244 @@ def calculate_live_investment_value(
         "is_live": False,
         "change_pct": 0.0
     }
+
+
+# ── HISTORICAL PRICE LOOKUP ───────────────────────────────────────────────────
+
+def _fetch_yf_chart(ticker: str) -> Optional[dict]:
+    url = f"https://query2.finance.yahoo.com/v8/finance/chart/{ticker}"
+    params = {"interval": "1d", "range": "10y"}
+    try:
+        resp = requests.get(url, headers=YF_HEADERS, params=params, timeout=3)
+        if resp.status_code == 200:
+            return resp.json()
+    except Exception as e:
+        logger.error(f"Error fetching YF chart for {ticker}: {e}")
+    return None
+
+
+def _parse_yf_chart_data(chart_data: dict) -> Optional[dict]:
+    result = chart_data.get("chart", {}).get("result", [])
+    if not result:
+        return None
+        
+    timestamps = result[0].get("timestamp", [])
+    close_prices = result[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+    meta = result[0].get("meta", {})
+    current_price = meta.get("regularMarketPrice") or meta.get("previousClose")
+    
+    if not timestamps or not close_prices:
+        return None
+        
+    now = time.time()
+    one_year_s = 365 * 24 * 3600
+    intervals = {
+        "1": now - one_year_s,
+        "3": now - 3 * one_year_s,
+        "5": now - 5 * one_year_s,
+        "10": now - 10 * one_year_s
+    }
+    
+    periods = {}
+    for name, target_ts in intervals.items():
+        closest_idx = None
+        min_diff = float('inf')
+        for idx, ts in enumerate(timestamps):
+            if close_prices[idx] is None:
+                continue
+            diff = abs(ts - target_ts)
+            if diff < min_diff:
+                min_diff = diff
+                closest_idx = idx
+                
+        if closest_idx is not None and min_diff < 10 * 24 * 3600:
+            periods[name] = round(float(close_prices[closest_idx]), 2)
+        else:
+            periods[name] = None
+            
+    return {
+        "current_price": round(float(current_price), 2) if current_price else None,
+        "periods": periods
+    }
+
+
+def _fetch_mf_historical_data(scheme_code_or_name: str) -> Optional[dict]:
+    code = scheme_code_or_name.strip()
+    if not code.isdigit():
+        search_url = "https://api.mfapi.in/mf/search"
+        try:
+            resp = requests.get(search_url, params={"q": scheme_code_or_name}, timeout=3)
+            if resp.status_code == 200:
+                results = resp.json()
+                if results:
+                    code = str(results[0]["schemeCode"])
+                else:
+                    return None
+            else:
+                return None
+        except Exception as e:
+            logger.error(f"Error searching MF {scheme_code_or_name}: {e}")
+            return None
+            
+    url = f"{AMFI_API_URL}{code}"
+    try:
+        resp = requests.get(url, timeout=3)
+        if resp.status_code != 200:
+            return None
+            
+        data = resp.json()
+        nav_list = data.get("data", [])
+        if not nav_list:
+            return None
+            
+        latest_nav = float(nav_list[0]["nav"])
+        
+        now = datetime.utcnow()
+        targets = {
+            "1": datetime(now.year - 1, now.month, now.day),
+            "3": datetime(now.year - 3, now.month, now.day),
+            "5": datetime(now.year - 5, now.month, now.day),
+            "10": datetime(now.year - 10, now.month, now.day)
+        }
+        
+        periods = {}
+        for name, target_date in targets.items():
+            closest_nav = None
+            min_diff = float('inf')
+            
+            for item in nav_list:
+                try:
+                    dt = datetime.strptime(item["date"], "%d-%m-%Y")
+                    diff = abs((dt - target_date).days)
+                    if diff < min_diff:
+                        min_diff = diff
+                        closest_nav = float(item["nav"])
+                except:
+                    continue
+                    
+            if closest_nav is not None and min_diff < 10:
+                periods[name] = closest_nav
+            else:
+                periods[name] = None
+                
+        return {
+            "current_price": latest_nav,
+            "periods": periods
+        }
+    except Exception as e:
+        logger.error(f"Error fetching historical MF NAV for {scheme_code_or_name}: {e}")
+        return None
+
+
+def _parse_gold_chart_data(gold_chart: dict, inr_chart: dict) -> Optional[dict]:
+    gold_res = gold_chart.get("chart", {}).get("result", [])
+    inr_res = inr_chart.get("chart", {}).get("result", [])
+    if not gold_res or not inr_res:
+        return None
+        
+    gold_ts = gold_res[0].get("timestamp", [])
+    gold_close = gold_res[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+    gold_meta = gold_res[0].get("meta", {})
+    gold_curr = gold_meta.get("regularMarketPrice") or gold_meta.get("previousClose")
+    
+    inr_ts = inr_res[0].get("timestamp", [])
+    inr_close = inr_res[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+    inr_meta = inr_res[0].get("meta", {})
+    inr_curr = inr_meta.get("regularMarketPrice") or inr_meta.get("previousClose")
+    
+    if not gold_ts or not gold_close or not inr_ts or not inr_close:
+        return None
+        
+    if gold_curr and inr_curr:
+        current_price = round((gold_curr * inr_curr) / 31.1035, 2)
+    else:
+        current_price = None
+        
+    now = time.time()
+    one_year_s = 365 * 24 * 3600
+    intervals = {
+        "1": now - one_year_s,
+        "3": now - 3 * one_year_s,
+        "5": now - 5 * one_year_s,
+        "10": now - 10 * one_year_s
+    }
+    
+    periods = {}
+    for name, target_ts in intervals.items():
+        g_idx = None
+        g_min_diff = float('inf')
+        for idx, ts in enumerate(gold_ts):
+            if gold_close[idx] is None:
+                continue
+            diff = abs(ts - target_ts)
+            if diff < g_min_diff:
+                g_min_diff = diff
+                g_idx = idx
+                
+        i_idx = None
+        i_min_diff = float('inf')
+        for idx, ts in enumerate(inr_ts):
+            if inr_close[idx] is None:
+                continue
+            diff = abs(ts - target_ts)
+            if diff < i_min_diff:
+                i_min_diff = diff
+                i_idx = idx
+                
+        if g_idx is not None and i_idx is not None and g_min_diff < 10 * 24 * 3600 and i_min_diff < 10 * 24 * 3600:
+            gold_usd = gold_close[g_idx]
+            usd_inr = inr_close[i_idx]
+            periods[name] = round((gold_usd * usd_inr) / 31.1035, 2)
+        else:
+            periods[name] = None
+            
+    return {
+        "current_price": current_price,
+        "periods": periods
+    }
+
+
+def get_historical_data(asset_type: str, symbol: str) -> Optional[dict]:
+    """
+    Unified public method to fetch actual historical data for an asset.
+    Returns: { "current_price": float, "periods": { "1": float, "3": float, "5": float, "10": float } }
+    """
+    symbol = symbol.strip().upper()
+    cache_key = f"hist_{asset_type}_{symbol}"
+    
+    # Check cache
+    if cache_key in _historical_cache:
+        cached_data, timestamp = _historical_cache[cache_key]
+        if (time.time() - timestamp) < HISTORICAL_CACHE_TTL_SECONDS:
+            logger.info(f"Returning cached historical data for {asset_type} {symbol}")
+            return cached_data
+
+    result = None
+    if asset_type == "stocks":
+        base = symbol.replace(".NS", "").replace(".BO", "")
+        # Try NSE
+        chart = _fetch_yf_chart(f"{base}.NS")
+        if not chart:
+            # Try BSE
+            chart = _fetch_yf_chart(f"{base}.BO")
+        if not chart:
+            # Try direct raw symbol (US stocks/crypto)
+            chart = _fetch_yf_chart(base)
+            
+        if chart:
+            result = _parse_yf_chart_data(chart)
+        
+    elif asset_type == "mutual_funds":
+        result = _fetch_mf_historical_data(symbol)
+        
+    elif asset_type == "gold":
+        gold_chart = _fetch_yf_chart("GC=F")
+        inr_chart = _fetch_yf_chart("INR=X")
+        if gold_chart and inr_chart:
+            result = _parse_gold_chart_data(gold_chart, inr_chart)
+            
+    if result:
+        _historical_cache[cache_key] = (result, time.time())
+        
+    return result
+

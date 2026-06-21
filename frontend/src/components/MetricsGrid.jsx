@@ -252,7 +252,7 @@ export default function MetricsGrid({ summaryData, setActiveTab }) {
           <div className="flex flex-col items-end justify-between h-full min-w-[70px] select-none">
             <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-violet-accent/10 border border-violet-accent/20 text-violet-accent mb-3">
               <span className="material-symbols-outlined text-[11px] animate-pulse -ml-0.5">bolt</span>
-              +15
+              +{summaryData?.this_month_txns ?? 15} this mo
             </span>
             <Sparkline data={entriesHistory} color="#a78bfa" />
           </div>

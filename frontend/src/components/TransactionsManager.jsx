@@ -234,6 +234,29 @@ export default function TransactionsManager({ searchQuery }) {
     return matchTab && matchesQuery(qLocal) && matchesQuery(qGlobal);
   });
 
+  // Implement Live CSV Exporter for Transactions Manager
+  const handleExportCSV = () => {
+    if (!filteredTransactions || filteredTransactions.length === 0) return;
+
+    let csvContent = "Transaction ID,Date,Description,Category,Type,Payment Type,Amount\r\n";
+    filteredTransactions.forEach((txn) => {
+      const isIncome = txn.type === 'income';
+      const cleanAmount = isIncome ? `+${txn.amount}` : `-${txn.amount}`;
+      const cleanDesc = (txn.description || '').replace(/"/g, '""');
+      csvContent += `"${txn.id}","${txn.date}","${cleanDesc}","${txn.category}","${txn.type}","${txn.payment_type || 'Ledger Entry'}","${cleanAmount}"\r\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `capitallens_transactions_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+
   // Pagination maths
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -369,7 +392,10 @@ export default function TransactionsManager({ searchQuery }) {
 
           {/* Right Side: Actions (Export + Add) */}
           <div className="flex items-center gap-3 w-full md:w-auto justify-end sm:justify-start md:justify-end flex-shrink-0">
-            <button className="flex items-center justify-center gap-2 px-4 py-2 border border-glass-border hover:bg-surface-variant/50 transition-all rounded-lg text-sm text-on-surface-variant font-bold flex-shrink-0">
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center justify-center gap-2 px-4 py-2 border border-glass-border hover:bg-surface-variant/50 transition-all rounded-lg text-sm text-on-surface-variant font-bold flex-shrink-0"
+            >
               <span className="material-symbols-outlined text-[18px]">file_download</span>
               <span className="hidden xs:inline sm:inline">Export</span>
             </button>

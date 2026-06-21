@@ -61,7 +61,14 @@ export default function QuickActionDock({ summaryData, goals, onAddTransaction, 
     if (healthScore >= 60) {
       return `Your budget is in a stable range. Consider boosting your active savings goals to increase your score.`;
     }
-    return `Warning: High expense ratio detected (${(expenseRatio * 100).toFixed(0)}%). Rebalance your savings or log transactions to clean up.`;
+    // Dynamic alerts based on the exact failure point rather than assuming high expense ratio
+    if (expenseRatio > 0.45) {
+      return `Warning: High expense ratio detected (${(expenseRatio * 100).toFixed(0)}%). Rebalance your savings or log transactions to clean up.`;
+    }
+    if (runway < 3.0) {
+      return `Warning: Low runway of ${runway.toFixed(1)} months. We recommend focusing on building your emergency fund first.`;
+    }
+    return `Your budget is stable, but consider adding to your active savings goals to improve your overall health score.`;
   };
 
   return (

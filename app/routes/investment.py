@@ -46,7 +46,7 @@ def calculate_investment_value(inv: Investment) -> float:
     years = elapsed_days / 365.0
 
     # ── Market-linked assets: try REAL live prices first ────────────────────
-    if inv.asset_type in ["stocks", "mutual_funds", "gold"]:
+    if inv.asset_type in ["stocks", "mutual_funds", "gold", "crypto", "cryptocurrency"]:
         live_result = calculate_live_investment_value(
             asset_type=inv.asset_type,
             asset_name=inv.asset_name,
@@ -159,10 +159,10 @@ async def get_suggestions(
     total_savings = total_income - total_expense
     savings_rate = (total_savings / total_income * 100) if total_income > 0 else 0.0
 
-    # Calculate available cash (exclude locked active investments)
-    active_investment_sum = db.query(func.sum(Investment.amount_invested)).filter(
-        Investment.user_id == current_user.id,
-        Investment.status == InvestmentStatus.active
+    # Calculate available cash (exclude locked savings goals)
+    from app.models.savings import SavingsGoal
+    locked_savings = db.query(func.sum(SavingsGoal.saved_amount)).filter(
+        SavingsGoal.user_id == current_user.id
     ).scalar() or 0.0
 
     # 1. Income stability detection (Salaried vs Freelance)
@@ -230,50 +230,53 @@ async def get_suggestions(
 
     # 2. Risk Score calculation (0-100)
     risk_score = 0
-    risk_score += stability_points
     
-    # Savings Rate points
-    if savings_rate > 50:
-        risk_score += 25
-    elif savings_rate >= 20:
-        risk_score += 15
-    else:
-        risk_score += 5
-        
-    # Runway points (since target is now 3 months, >3 months gives +25, 1.5-3m gives +15, <1.5m gives 0)
-    if runway_months > 3:
-        risk_score += 25
+    # Runway points (0 to 35)
+    if runway_months >= 6.0:
+        risk_score += 35
+    elif runway_months >= 3.0:
+        risk_score += 20
     elif runway_months >= 1.5:
-        risk_score += 15
+        risk_score += 10
     else:
         risk_score += 0
         
-    # Existing Investments points
-    active_investments_count = db.query(Investment).filter(
-        Investment.user_id == current_user.id,
-        Investment.status == InvestmentStatus.active
-    ).count()
-    
-    if active_investments_count > 0:
-        risk_score += 20
+    # Savings Rate points (0 to 25)
+    if savings_rate >= 40.0:
+        risk_score += 25
+    elif savings_rate >= 20.0:
+        risk_score += 15
+    elif savings_rate >= 10.0:
+        risk_score += 5
     else:
-        risk_score += 10
+        risk_score += 0
         
-    # Risk Profile assignment
-    if risk_score <= 30:
+    # Stability points (0 to 20)
+    risk_score += 20 if income_stability == "Salaried" else 5
+    
+    # Emergency Fund points (0 to 20)
+    if total_savings >= emergency_target:
+        risk_score += 20
+    elif total_savings >= emergency_target / 2:
+        risk_score += 10
+    else:
+        risk_score += 0
+        
+    # Risk Profile assignment with safety caps
+    if risk_score <= 35 or runway_months < 1.5 or total_savings < (emergency_target / 2):
         risk_profile = "Conservative"
-    elif risk_score <= 60:
+    elif risk_score <= 65 or runway_months < 6.0 or total_savings < emergency_target:
         risk_profile = "Moderate"
     else:
         risk_profile = "Aggressive"
 
     # 3. Capping investable surplus based on runway safety thresholds
-    unallocated_cash = max(0.0, total_savings - active_investment_sum)
+    unallocated_cash = max(0.0, total_savings - locked_savings)
     warning_message = None
     
-    if runway_months < 1.5:
-        # Critical warning & tight cap: 15% of savings, max 20,000
-        safe_cap = max(0.0, min(total_savings * 0.15, 20000.0))
+    if runway_months < 1.5 or total_savings < (emergency_target / 2):
+        # Critical warning & tight cap: 10% of savings, max 5,000
+        safe_cap = max(0.0, min(total_savings * 0.10, 5000.0))
         safe_cap = round(safe_cap / 100.0) * 100.0
         available_cash = min(unallocated_cash, safe_cap)
         
@@ -283,8 +286,8 @@ async def get_suggestions(
             f"to ₹{available_cash:,.0f}."
         )
     elif total_savings < emergency_target:
-        # Partial warning & moderate cap: total savings minus half of emergency target
-        safe_cap = max(0.0, total_savings - (emergency_target / 2))
+        # Partial warning & moderate cap: 20% of savings, max 15,000
+        safe_cap = max(0.0, min(total_savings * 0.20, 15000.0))
         safe_cap = round(safe_cap / 100.0) * 100.0
         available_cash = min(unallocated_cash, safe_cap)
         
@@ -293,7 +296,8 @@ async def get_suggestions(
             f"For safety, we capped your investable surplus to ₹{available_cash:,.0f}."
         )
     else:
-        available_cash = unallocated_cash
+        # Subtract the emergency target from unallocated cash to reserve it as liquid buffer cash
+        available_cash = max(0.0, unallocated_cash - emergency_target)
 
     # 4. Diversification & Concentration Checks
     active_investments = db.query(Investment).filter(
@@ -349,6 +353,32 @@ async def get_suggestions(
         emergency_gap=emergency_gap,
         portfolio_warnings=portfolio_warnings
     )
+
+    # Enrich suggestions with real historical data and calculate actual 5-year CAGR
+    from app.services.market_data import get_historical_data
+    for sug in suggestions:
+        asset_type = sug.get("asset_type")
+        ticker = sug.get("ticker")
+        if asset_type in ["stocks", "mutual_funds", "gold"] and ticker:
+            try:
+                hist = get_historical_data(asset_type, ticker)
+                if hist:
+                    sug["historical_data"] = hist
+                    curr_p = hist.get("current_price")
+                    periods = hist.get("periods", {})
+                    cagr = None
+                    if curr_p:
+                        if periods.get("5") and periods["5"] > 0:
+                            cagr = ((curr_p / periods["5"]) ** (1 / 5.0) - 1) * 100
+                        elif periods.get("3") and periods["3"] > 0:
+                            cagr = ((curr_p / periods["3"]) ** (1 / 3.0) - 1) * 100
+                        elif periods.get("1") and periods["1"] > 0:
+                            cagr = ((curr_p / periods["1"]) - 1) * 100
+                    if cagr is not None:
+                        sug["expected_return_rate"] = round(cagr, 1)
+            except Exception as e:
+                logger.error(f"Failed to enrich suggestion {sug.get('asset_name')} with ticker {ticker}: {e}")
+
     return {
         "available_cash": round(available_cash, 2),
         "savings_rate": round(savings_rate, 2),
@@ -376,6 +406,9 @@ async def create_investment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Use user custom date or default to now
+    inv_date = inv_data.created_at or datetime.utcnow()
+
     # 1. Add Investment record directly
     # (Users track existing investments — no balance gate needed)
     new_inv = Investment(
@@ -391,7 +424,8 @@ async def create_investment(
         annual_contribution=inv_data.annual_contribution,
         rental_income=inv_data.rental_income,
         appreciation_rate=inv_data.appreciation_rate,
-        status=InvestmentStatus.active
+        status=InvestmentStatus.active,
+        created_at=inv_date
     )
     db.add(new_inv)
 
@@ -403,7 +437,7 @@ async def create_investment(
         type=TransactionType.expense,
         category="Investment",
         description=expense_desc,
-        date=datetime.utcnow()
+        date=inv_date
     )
     db.add(txn)
 
@@ -421,7 +455,7 @@ async def create_investment(
             type=TransactionType.income,
             category="Portfolio Capital",
             description=f"Initial capital for {new_inv.asset_name} investment tracking",
-            date=datetime.utcnow()
+            date=inv_date
         )
         db.add(balance_txn)
 
@@ -531,8 +565,8 @@ async def update_investment(
 
     inv.updated_at = datetime.utcnow()
 
-    # Sync ledger transaction if amount or name changed
-    if "amount_invested" in update_dict or "asset_name" in update_dict:
+    # Sync ledger transaction if amount, name, or created_at changed
+    if "amount_invested" in update_dict or "asset_name" in update_dict or "created_at" in update_dict:
         txn = db.query(Transaction).filter(
             Transaction.user_id == current_user.id,
             Transaction.type == TransactionType.expense,
@@ -542,6 +576,8 @@ async def update_investment(
         if txn:
             if "amount_invested" in update_dict:
                 txn.amount = inv.amount_invested
+            if "created_at" in update_dict:
+                txn.date = inv.created_at
             if "asset_name" in update_dict or "amount_invested" in update_dict:
                 txn.description = f"Invested in {inv.asset_name} ({inv.asset_type.replace('_', ' ').title()})"
 
@@ -684,6 +720,7 @@ async def import_cas_statement(
         )
     
     # Save uploaded file to temp location
+    tmp_path = None
     try:
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
             tmp.write(await file.read())
@@ -795,12 +832,13 @@ async def import_cas_statement(
     except Exception as e:
         logger.error(f"CAS import failed: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to parse CAS PDF: {str(e)}"
         )
     finally:
         # Clean up temp file
-        try:
-            os.unlink(tmp_path)
-        except Exception:
-            pass
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
