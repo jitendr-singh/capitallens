@@ -3,7 +3,7 @@ name = "app"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 dependencies = [
     "alembic==1.13.0",
     "apscheduler==3.10.4",
@@ -32,9 +32,16 @@ dependencies = [
     "starlette>=0.40.0",
     "statsmodels==0.14.6",
     "twilio==8.10.0",
-    "uvicorn[standard]==0.24.0",
+    "uvicorn[standard]>=0.34.0",
     "yfinance>=1.4.1",
 ]
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
 
 [dependency-groups]
 dev = [
