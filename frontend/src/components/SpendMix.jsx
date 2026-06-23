@@ -49,10 +49,7 @@ export default function SpendMix({ categoryData }) {
   // ── Resolve data source ───────────────────────────────────────────────────
   // Priority: liveData (from toggle fetch) > categoryData prop (initial load) > default
   const source = liveData || categoryData;
-  const rawExpenses =
-    source?.expense_by_category?.length > 0
-      ? source.expense_by_category
-      : DEFAULT_EXPENSES;
+  const rawExpenses = source?.expense_by_category || [];
 
   // Sort descending by amount → highest spender first → attach palette color
   const expenses = [...rawExpenses]
@@ -84,6 +81,7 @@ export default function SpendMix({ categoryData }) {
   });
 
   const topTwo = segments.slice(0, 2);
+  const isDataEmpty = expenses.length === 0 || total === 0;
 
   return (
     <div className="lg:col-span-7 flex flex-col gap-6">
@@ -122,99 +120,108 @@ export default function SpendMix({ categoryData }) {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-8">
-
-          {/* ── Radial SVG Donut ────────────────────────────────────────────── */}
-          <div className="relative w-40 h-40 flex-shrink-0">
-            <svg
-              className={`w-full h-full -rotate-90 transition-opacity duration-300 ${loading ? 'opacity-30' : 'opacity-100'}`}
-              viewBox="0 0 100 100"
-            >
-              {/* Background track */}
-              <circle cx="50" cy="50" r="40" fill="transparent" stroke="currentColor"
-                strokeWidth="12" className="text-surface-variant/20" />
-
-              {/* Segments — reverse order so index-0 is on top */}
-              {[...segments].reverse().map((seg, ri) => {
-                const idx = segments.length - 1 - ri;
-                return (
-                  <circle
-                    key={idx}
-                    cx="50" cy="50" r="40"
-                    fill="transparent"
-                    stroke={seg.color.hex}
-                    strokeWidth="12"
-                    strokeDasharray={`${seg.dash} ${CIRC - seg.dash}`}
-                    strokeDashoffset={seg.offset}
-                    style={{ filter: `drop-shadow(0 0 4px ${seg.color.shadow})` }}
-                  />
-                );
-              })}
-            </svg>
-
-            {/* Centre label */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-on-surface-variant text-[9px] font-label-caps tracking-wider opacity-60">
-                {loading ? '...' : 'TOTAL'}
-              </span>
-              <span className="text-xl font-stat-lg text-text-primary font-bold">
-                {formatTotalK(total)}
-              </span>
-            </div>
+        {isDataEmpty ? (
+          <div className="p-8 text-center text-on-surface-variant opacity-60 text-sm flex flex-col items-center justify-center gap-3 min-h-[160px] animate-fade-in">
+            <span className="material-symbols-outlined text-[36px] text-on-surface-variant/40 animate-pulse">pie_chart</span>
+            <p>No expense data logged for this period.</p>
           </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row items-center gap-8 animate-fade-in">
 
-          {/* ── Legend ──────────────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3 flex-1 w-full">
-            {expenses.length === 0 ? (
-              <p className="col-span-2 text-xs text-on-surface-variant opacity-60 text-center">
-                No expense data for {scopeLabel.toLowerCase()}
-              </p>
-            ) : segments.map((item, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-sm flex-shrink-0 ${item.color.bg}`} />
-                <span className="text-xs font-body-base text-on-surface-variant truncate">
-                  {item.category}
-                  <span className="ml-1 opacity-60">({item.pct}%)</span>
+            {/* ── Radial SVG Donut ────────────────────────────────────────────── */}
+            <div className="relative w-40 h-40 flex-shrink-0">
+              <svg
+                className={`w-full h-full -rotate-90 transition-opacity duration-300 ${loading ? 'opacity-30' : 'opacity-100'}`}
+                viewBox="0 0 100 100"
+              >
+                {/* Background track */}
+                <circle cx="50" cy="50" r="40" fill="transparent" stroke="currentColor"
+                  strokeWidth="12" className="text-surface-variant/20" />
+
+                {/* Segments — reverse order so index-0 is on top */}
+                {[...segments].reverse().map((seg, ri) => {
+                  const idx = segments.length - 1 - ri;
+                  return (
+                    <circle
+                      key={idx}
+                      cx="50" cy="50" r="40"
+                      fill="transparent"
+                      stroke={seg.color.hex}
+                      strokeWidth="12"
+                      strokeDasharray={`${seg.dash} ${CIRC - seg.dash}`}
+                      strokeDashoffset={seg.offset}
+                      style={{ filter: `drop-shadow(0 0 4px ${seg.color.shadow})` }}
+                    />
+                  );
+                })}
+              </svg>
+
+              {/* Centre label */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-on-surface-variant text-[9px] font-label-caps tracking-wider opacity-60">
+                  {loading ? '...' : 'TOTAL'}
+                </span>
+                <span className="text-xl font-stat-lg text-text-primary font-bold">
+                  {formatTotalK(total)}
                 </span>
               </div>
-            ))}
+            </div>
+
+            {/* ── Legend ──────────────────────────────────────────────────────── */}
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 flex-1 w-full">
+              {expenses.length === 0 ? (
+                <p className="col-span-2 text-xs text-on-surface-variant opacity-60 text-center">
+                  No expense data for {scopeLabel.toLowerCase()}
+                </p>
+              ) : segments.map((item, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className={`w-2.5 h-2.5 rounded-sm flex-shrink-0 ${item.color.bg}`} />
+                  <span className="text-xs font-body-base text-on-surface-variant truncate">
+                    {item.category}
+                    <span className="ml-1 opacity-60">({item.pct}%)</span>
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ── Top 2 Category Detail Cards ───────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {topTwo.map((item, i) => (
-          <div
-            key={i}
-            className={`midnight-glass p-4 rounded-xl border-l-2 cursor-default transition-opacity duration-300 ${item.color.border} ${loading ? 'opacity-40' : 'opacity-100'}`}
-          >
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-body-bold text-sm text-text-primary font-semibold truncate pr-2">
-                {item.category}
-              </span>
-              <span className={`text-label-caps text-xs font-bold flex-shrink-0 ${item.color.text}`}>
-                {item.pct}%
-              </span>
-            </div>
+      {!isDataEmpty && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in">
+          {topTwo.map((item, i) => (
+            <div
+              key={i}
+              className={`midnight-glass p-4 rounded-xl border-l-2 cursor-default transition-opacity duration-300 ${item.color.border} ${loading ? 'opacity-40' : 'opacity-100'}`}
+            >
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-body-bold text-sm text-text-primary font-semibold truncate pr-2">
+                  {item.category}
+                </span>
+                <span className={`text-label-caps text-xs font-bold flex-shrink-0 ${item.color.text}`}>
+                  {item.pct}%
+                </span>
+              </div>
 
-            {/* Progress bar */}
-            <div className="h-1.5 w-full bg-surface-variant/30 rounded-full overflow-hidden mb-2">
-              <div
-                className={`h-full rounded-full transition-all duration-700 ${item.color.bg}`}
-                style={{ width: `${Math.min(item.pct, 100)}%` }}
-              />
-            </div>
+              {/* Progress bar */}
+              <div className="h-1.5 w-full bg-surface-variant/30 rounded-full overflow-hidden mb-2">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${item.color.bg}`}
+                  style={{ width: `${Math.min(item.pct, 100)}%` }}
+                />
+              </div>
 
-            <p className="text-[10px] text-on-surface-variant">
-              {formatCurrency(item.amount)}{' '}
-              <span className="opacity-70">
-                {scope === 'month' ? 'spent this month' : 'spent all-time'}
-              </span>
-            </p>
-          </div>
-        ))}
-      </div>
+              <p className="text-[10px] text-on-surface-variant">
+                {formatCurrency(item.amount)}{' '}
+                <span className="opacity-70">
+                  {scope === 'month' ? 'spent this month' : 'spent all-time'}
+                </span>
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
 
     </div>
   );

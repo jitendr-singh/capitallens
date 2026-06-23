@@ -44,28 +44,22 @@ export const AuthProvider = ({ children }) => {
 
 
   const login = async (email, password) => {
-    setLoading(true);
     try {
       const session = await authService.login(email, password);
       setUser(session.user);
       return session.user;
     } catch (error) {
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
   const register = async (name, email, password) => {
-    setLoading(true);
     try {
       const session = await authService.register(name, email, password);
       setUser(session.user);
       return session.user;
     } catch (error) {
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 

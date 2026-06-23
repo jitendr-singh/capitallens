@@ -47,10 +47,10 @@ function Sparkline({ data, color }) {
 export default function MetricsGrid({ summaryData, setActiveTab }) {
   const { formatCurrency } = useCurrency();
   
-  const totalBalance = summaryData?.total_savings ?? 1248592;
-  const monthlyIncome = summaryData?.monthly_income ?? 1261042;
-  const monthlyExpenses = summaryData?.total_expense ?? 12450;
-  const transactionCount = summaryData?.transaction_count ?? 142;
+  const totalBalance = summaryData?.total_savings ?? 0;
+  const monthlyIncome = summaryData?.monthly_income ?? 0;
+  const monthlyExpenses = summaryData?.total_expense ?? 0;
+  const transactionCount = summaryData?.transaction_count ?? 0;
 
   const lockedAmount = summaryData?.locked_savings ?? 0;
   const availableAmount = summaryData?.available_cash ?? totalBalance;

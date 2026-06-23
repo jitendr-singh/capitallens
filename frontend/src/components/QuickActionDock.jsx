@@ -4,11 +4,10 @@ import { useCurrency } from '../context/CurrencyContext';
 export default function QuickActionDock({ summaryData, goals, onAddTransaction, onAddGoal, onOpenChat, setActiveTab }) {
   const { formatCurrency } = useCurrency();
 
-  // Get data parameters with safe fallbacks
-  const income = summaryData?.monthly_income ?? 1261042;
-  const expense = summaryData?.total_expense ?? 12450;
-  const runway = summaryData?.runway_months ?? 99.3; // months of runway
-  const savingsRate = summaryData?.savings_rate ?? 99.0;
+  const income = summaryData?.monthly_income ?? 0;
+  const expense = summaryData?.total_expense ?? 0;
+  const runway = summaryData?.runway_months ?? 0; // months of runway
+  const savingsRate = summaryData?.savings_rate ?? 0;
 
   // Compute average savings goals progress
   const activeGoals = goals && goals.length > 0 ? goals : [];

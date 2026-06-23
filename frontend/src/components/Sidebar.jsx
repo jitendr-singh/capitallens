@@ -71,13 +71,7 @@ export default function Sidebar({ isOpen, onClose, activeTab, setActiveTab }) {
 
         {/* Footer Area */}
         <div className="mt-auto pt-6 border-t border-glass-border space-y-2">
-          {/* Upgrade to Pro — Coming Soon */}
-          <div className="w-full mb-2 relative overflow-hidden rounded-lg">
-            <div className="w-full py-2.5 bg-gradient-to-r from-primary/20 to-secondary/20 border border-primary/20 text-primary font-bold text-sm text-center rounded-lg select-none">
-              Upgrade to Pro
-              <span className="ml-2 text-[9px] px-1.5 py-0.5 bg-primary/20 rounded font-bold tracking-wider uppercase">Soon</span>
-            </div>
-          </div>
+
 
           <a
             href="mailto:support@capitallens.com"

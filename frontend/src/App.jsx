@@ -39,92 +39,121 @@ export default function App() {
   const [spendMix, setSpendMix] = useState(null);
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   // Legacy High-Fidelity Mockup Fallbacks for empty database states
   const mockSummary = {
-    total_income: 1261042.00,
-    monthly_income: 1261042.00,
-    income_trend: 12.4,
-    total_expense: 12450.00,
-    total_savings: 1248592.00,
-    savings_rate: 99.0,
-    burn_rate: 12450.00,
-    runway_months: 99.3
+    total_income: 125000.00,
+    monthly_income: 125000.00,
+    income_trend: 15.5,
+    total_expense: 45000.00,
+    total_savings: 320000.00,
+    locked_savings: 200000.00,
+    available_cash: 120000.00,
+    savings_rate: 64.0,
+    burn_rate: 45000.00,
+    runway_months: 7.1,
+    transaction_count: 6,
+    this_month_txns: 6
   };
 
   const mockGoals = [
     {
       id: 1,
-      title: "Euro Summer '25",
-      target_amount: 10000,
-      saved_amount: 7200,
-      monthly_contribution: 500,
-      icon: 'flight_takeoff',
+      title: 'Emergency Buffer',
+      target_amount: 100000,
+      saved_amount: 80000,
+      monthly_contribution: 10000,
+      icon: 'shield',
       is_completed: false,
-      progress_percentage: 72.0,
-      months_remaining: 12
+      progress_percentage: 80.0,
+      months_remaining: 2
     },
     {
       id: 2,
-      title: 'Property Depot',
-      target_amount: 100000,
-      saved_amount: 45000,
-      monthly_contribution: 2500,
-      icon: 'home',
+      title: 'Euro Trip 2026',
+      target_amount: 150000,
+      saved_amount: 90000,
+      monthly_contribution: 15000,
+      icon: 'flight_takeoff',
       is_completed: false,
-      progress_percentage: 45.0,
-      months_remaining: 18
+      progress_percentage: 60.0,
+      months_remaining: 4
     },
     {
       id: 3,
-      title: 'Retirement Fund',
-      target_amount: 500000,
-      saved_amount: 455000,
+      title: 'Tech Upgrade',
+      target_amount: 50000,
+      saved_amount: 30000,
       monthly_contribution: 5000,
-      icon: 'rocket_launch',
+      icon: 'laptop_mac',
       is_completed: false,
-      progress_percentage: 91.0,
-      months_remaining: 240
+      progress_percentage: 60.0,
+      months_remaining: 4
     }
   ];
 
   const mockMix = {
     expense_by_category: [
-      { category: 'Housing', amount: 4980.00 },
-      { category: 'Food', amount: 3112.50 },
-      { category: 'Transport', amount: 1245.00 },
-      { category: 'Other', amount: 3112.50 }
+      { category: 'Housing', amount: 18000.00 },
+      { category: 'Food', amount: 12000.00 },
+      { category: 'Transport', amount: 5000.00 },
+      { category: 'Other', amount: 10000.00 }
     ],
     income_by_category: [
-      { category: 'Investment', amount: 12000.00 },
-      { category: 'Salary', amount: 8000.00 }
+      { category: 'Salary', amount: 100000.00 },
+      { category: 'Investment', amount: 25000.00 }
     ]
   };
 
   const mockRecent = [
     {
       id: '#TXN-9082-CS',
-      amount: 12450.00,
+      amount: 100000.00,
       type: 'income',
-      category: 'Tech Equity Index',
-      description: 'Executed trade',
-      date: 'Oct 24, 14:02'
+      category: 'Salary',
+      description: 'Monthly corporate salary',
+      date: 'Jun 22, 10:00'
     },
     {
       id: '#TXN-8812-CS',
-      amount: 1200.00,
-      type: 'expense',
-      category: 'Digital Collectible A',
-      description: 'Pending mint purchase',
-      date: 'Oct 24, 11:30'
+      amount: 25000.00,
+      type: 'income',
+      category: 'Investment',
+      description: 'Dividend payout',
+      date: 'Jun 21, 14:30'
     },
     {
       id: '#TXN-8745-CS',
+      amount: 18000.00,
+      type: 'expense',
+      category: 'Housing',
+      description: 'Apartment rent payout',
+      date: 'Jun 18, 09:15'
+    },
+    {
+      id: '#TXN-8630-CS',
+      amount: 12000.00,
+      type: 'expense',
+      category: 'Food',
+      description: 'Groceries & Dining',
+      date: 'Jun 15, 20:00'
+    },
+    {
+      id: '#TXN-8512-CS',
       amount: 5000.00,
-      type: 'income',
-      category: 'Liquid Cash Reserve',
-      description: 'Recurring auto transfer',
-      date: 'Oct 23, 16:45'
+      type: 'expense',
+      category: 'Transport',
+      description: 'Fuel & Commute',
+      date: 'Jun 12, 11:30'
+    },
+    {
+      id: '#TXN-8401-CS',
+      amount: 10000.00,
+      type: 'expense',
+      category: 'Other',
+      description: 'Weekend shopping & leisure',
+      date: 'Jun 10, 16:45'
     }
   ];
 
@@ -140,34 +169,70 @@ export default function App() {
       ]);
 
       const txns = recent?.recent_transactions || recent || [];
-      const hasRealGoals = goals && goals.length > 0;
-      const hasRealTxns = txns && txns.length > 0;
-      const hasRealSummary = summary && (summary.total_income > 0 || summary.total_expense > 0);
-
-      // If the database is completely empty (no goals, no transactions, and 0 summary values)
-      if (!hasRealGoals && !hasRealTxns && !hasRealSummary) {
-        setSummaryData(mockSummary);
-        setSavingsGoals(mockGoals);
-        setSpendMix(mockMix);
-        setRecentTransactions(mockRecent);
-      } else {
-        // Integrate dynamically: use real records, merge if partially populated
-        setSummaryData(hasRealSummary ? summary : mockSummary);
-        setSavingsGoals(hasRealGoals ? goals : mockGoals);
-        setSpendMix(mix && mix.expense_by_category?.length > 0 ? mix : mockMix);
-        setRecentTransactions(hasRealTxns ? txns : mockRecent);
+      if (!isDemoMode) {
+        setSummaryData(summary || {
+          total_income: 0.0,
+          monthly_income: 0.0,
+          income_trend: 0.0,
+          total_expense: 0.0,
+          total_savings: 0.0,
+          locked_savings: 0.0,
+          available_cash: 0.0,
+          savings_rate: 0.0,
+          burn_rate: 0.0,
+          runway_months: 0.0,
+          transaction_count: 0,
+          this_month_txns: 0
+        });
+        setSavingsGoals(goals || []);
+        setSpendMix(mix || { expense_by_category: [], income_by_category: [] });
+        setRecentTransactions(txns);
       }
     } catch (error) {
       console.error('Failed to sync dashboard data with FastAPI.', error);
-      // Fail-safe fallbacks
-      setSummaryData(mockSummary);
-      setSavingsGoals(mockGoals);
-      setSpendMix(mockMix);
-      setRecentTransactions(mockRecent);
+      if (!isDemoMode) {
+        setSummaryData({
+          total_income: 0.0,
+          monthly_income: 0.0,
+          income_trend: 0.0,
+          total_expense: 0.0,
+          total_savings: 0.0,
+          locked_savings: 0.0,
+          available_cash: 0.0,
+          savings_rate: 0.0,
+          burn_rate: 0.0,
+          runway_months: 0.0,
+          transaction_count: 0,
+          this_month_txns: 0
+        });
+        setSavingsGoals([]);
+        setSpendMix({ expense_by_category: [], income_by_category: [] });
+        setRecentTransactions([]);
+      }
     } finally {
       setDataLoading(false);
     }
-  }, []);
+  }, [isDemoMode]);
+
+  const loadDemoData = () => {
+    setIsDemoMode(true);
+    setSummaryData(mockSummary);
+    setSavingsGoals(mockGoals);
+    setSpendMix(mockMix);
+    setRecentTransactions(mockRecent);
+  };
+
+  const clearDemoData = () => {
+    setIsDemoMode(false);
+    fetchDashboardData();
+  };
+
+  const isDatabaseEmpty = !dataLoading && 
+    (summaryData === null || 
+     (summaryData.total_income === 0 && 
+      summaryData.total_expense === 0 && 
+      savingsGoals.length === 0 && 
+      recentTransactions.length === 0));
   
   const handleCreateTransaction = async (txnData) => {
     try {
@@ -180,10 +245,19 @@ export default function App() {
 
   // Sync on Mount
   useEffect(() => {
-    if (!authLoading) {
-      fetchDashboardData();
+    if (!authLoading && !isDemoMode) {
+      if (user) {
+        fetchDashboardData();
+      } else {
+        // Clear all dashboard data states when logged out
+        setSummaryData(null);
+        setSavingsGoals([]);
+        setSpendMix(null);
+        setRecentTransactions([]);
+        setDataLoading(true);
+      }
     }
-  }, [authLoading, fetchDashboardData]);
+  }, [authLoading, fetchDashboardData, isDemoMode, user]);
 
   // Executive Date Formatter
   const getExecutiveDate = () => {
@@ -219,7 +293,7 @@ export default function App() {
     .filter(txn => txn.type === 'expense' && isToday(txn.date))
     .reduce((sum, txn) => sum + parseFloat(txn.amount), 0);
 
-  const totalBalance = summaryData?.total_savings ?? 1248592;
+  const totalBalance = summaryData?.total_savings ?? 0;
   const availableAmount = summaryData?.available_cash ?? totalBalance;
 
 
@@ -283,7 +357,10 @@ export default function App() {
                   </h2>
                 </div>
                 <p className="text-on-surface-variant text-xs md:text-sm mt-1.5 opacity-70">
-                  Executive summary for {getExecutiveDate()}
+                  {isDatabaseEmpty && !isDemoMode 
+                    ? `Welcome back, ${user?.name || 'User'}! 👋 Get started by adding your first transaction.`
+                    : `Welcome back, ${user?.name || 'User'}! 👋 Executive summary for ${getExecutiveDate()}`
+                  }
                 </p>
               </div>
               
@@ -312,56 +389,142 @@ export default function App() {
               </div>
             </header>
 
-            {/* Smart Savings Alert Widget */}
-            <SmartSavingsAlert
-              summaryData={summaryData}
-              goals={savingsGoals}
-              onRefresh={fetchDashboardData}
-            />
+            {/* Demo Mode Status Banner */}
+            {isDemoMode && (
+              <div className="mb-6 p-4 rounded-xl border border-violet-500/30 bg-violet-950/20 backdrop-blur-md flex flex-col sm:flex-row justify-between items-center gap-3 shadow-[0_0_15px_rgba(139,92,246,0.1)]">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-violet-400 animate-pulse">
+                    info
+                  </span>
+                  <p className="text-sm text-violet-200">
+                    <span className="font-semibold text-violet-300">Demo Mode is Active</span>. You are viewing high-fidelity mockup data to preview the dashboard.
+                  </p>
+                </div>
+                <button
+                  onClick={clearDemoData}
+                  className="text-xs font-bold uppercase tracking-wider text-white bg-violet-600 hover:bg-violet-500 active:scale-95 px-4 py-2 rounded-lg transition-all border border-violet-400/20 shadow-[0_0_10px_rgba(139,92,246,0.2)]"
+                >
+                  Clear Demo Data
+                </button>
+              </div>
+            )}
 
-            {/* Bento Metrics Cards */}
-            <QuickActionDock
-              summaryData={summaryData}
-              goals={savingsGoals}
-              onAddTransaction={() => setShowAddTxnModal(true)}
-              onAddGoal={() => setActiveTab('savings')}
-              onOpenChat={() => setIsChatOpen(true)}
-              setActiveTab={setActiveTab}
-            />
+            {isDatabaseEmpty && !isDemoMode ? (
+              <>
+                {/* Bento Metrics Cards - ₹0.00 State */}
+                <MetricsGrid summaryData={summaryData} setActiveTab={setActiveTab} />
 
-            <MetricsGrid summaryData={summaryData} setActiveTab={setActiveTab} />
+                {/* Unified Onboarding Box */}
+                <div className="midnight-glass p-8 md:p-12 rounded-2xl flex flex-col items-center text-center justify-center min-h-[400px] border border-glass-border/10 shadow-2xl relative overflow-hidden group mb-6">
+                  {/* Glowing backdrop circle */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors duration-500"></div>
 
-            {/* Trajectory Bar Charts */}
-            <WealthGrowthChart summaryData={summaryData} />
+                  {/* Checklist SVG illustration */}
+                  <div className="relative mb-6 p-4 rounded-2xl bg-white/3 border border-glass-border/20 shadow-inner group-hover:border-primary/30 transition-all duration-300">
+                    <svg className="w-16 h-16 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="8" y="2" width="8" height="4" rx="1" ry="1" fill="currentColor" fillOpacity="0.1" stroke="currentColor" />
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                      <path d="M12 11h4" />
+                      <path d="M12 16h4" />
+                      <circle cx="8" cy="11" r="1.5" fill="currentColor" />
+                      <circle cx="8" cy="16" r="1.5" fill="currentColor" />
+                    </svg>
+                  </div>
 
-            {/* Bottom Content Grid (Savings Goals & Spend Mix) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-gutter-desktop mb-8">
-              {/* Goals Hub (Span-5) */}
-              <SavingsGoals
-                goals={savingsGoals}
-                onRefresh={fetchDashboardData}
-                onViewAll={() => setActiveTab('savings')}
-              />
+                  <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-b from-white to-[#cbd5e1] bg-clip-text text-transparent mb-3">
+                    You don't have any data yet
+                  </h3>
+                  <p className="text-on-surface-variant text-sm max-w-md opacity-70 leading-relaxed mb-8">
+                    Start tracking your income, expenses, and savings goals to unlock real-time financial intelligence. Your command center will automatically populate as logs are recorded.
+                  </p>
 
-              {/* Spend Mix & Breakdown (Span-7) */}
-              <SpendMix categoryData={spendMix} />
-            </div>
+                  <button
+                    onClick={() => setShowAddTxnModal(true)}
+                    className="relative group/btn overflow-hidden rounded-xl bg-primary text-[#080e1a] font-bold text-sm tracking-wide px-6 py-3.5 hover:brightness-110 active:scale-95 transition-all shadow-[0_4px_20px_rgba(90,240,179,0.2)] hover:shadow-[0_4px_25px_rgba(90,240,179,0.3)] flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined font-bold text-lg">add</span>
+                    Add Your First Transaction
+                  </button>
+                </div>
 
-            {/* Transaction Logs Footer Block */}
-            <RecentCommandLogs
-              transactions={recentTransactions.filter(txn => {
-                if (!searchQuery) return true;
-                const query = searchQuery.toLowerCase().trim();
-                return (
-                  txn.id.toString().toLowerCase().includes(query) ||
-                  (txn.category || '').toLowerCase().includes(query) ||
-                  (txn.description || '').toLowerCase().includes(query) ||
-                  txn.amount.toString().includes(query) ||
-                  (txn.type || '').toLowerCase().includes(query)
-                );
-              })}
-              onRefresh={fetchDashboardData}
-            />
+                {/* Try with demo data banner */}
+                <div className="midnight-glass p-6 md:p-8 rounded-xl border border-glass-border/10 flex flex-col md:flex-row justify-between items-center gap-4 relative overflow-hidden group">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 mt-0.5">
+                      <span className="material-symbols-outlined">analytics</span>
+                    </div>
+                    <div className="text-left flex-1">
+                      <h4 className="font-bold text-white text-base mb-1">
+                        Explore with Demo Data
+                      </h4>
+                      <p className="text-xs md:text-sm text-on-surface-variant opacity-75 max-w-xl">
+                        Want to see how Capitallens looks with full activity? Load high-fidelity mockup data to preview savings goals, interactive expense breakdowns, and wealth charts instantly.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={loadDemoData}
+                    className="bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-lg transition-all border border-violet-400/20 shadow-[0_0_15px_rgba(139,92,246,0.15)] flex items-center gap-2 whitespace-nowrap active:scale-95"
+                  >
+                    <span className="material-symbols-outlined text-sm">rocket_launch</span>
+                    Load Demo Data
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Smart Savings Alert Widget */}
+                <SmartSavingsAlert
+                  summaryData={summaryData}
+                  goals={savingsGoals}
+                  onRefresh={fetchDashboardData}
+                />
+
+                {/* Bento Metrics Cards */}
+                <QuickActionDock
+                  summaryData={summaryData}
+                  goals={savingsGoals}
+                  onAddTransaction={() => setShowAddTxnModal(true)}
+                  onAddGoal={() => setActiveTab('savings')}
+                  onOpenChat={() => setIsChatOpen(true)}
+                  setActiveTab={setActiveTab}
+                />
+
+                <MetricsGrid summaryData={summaryData} setActiveTab={setActiveTab} />
+
+                {/* Trajectory Bar Charts */}
+                <WealthGrowthChart summaryData={summaryData} />
+
+                {/* Bottom Content Grid (Savings Goals & Spend Mix) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-gutter-desktop mb-8">
+                  {/* Goals Hub (Span-5) */}
+                  <SavingsGoals
+                    goals={savingsGoals}
+                    onRefresh={fetchDashboardData}
+                    onViewAll={() => setActiveTab('savings')}
+                  />
+
+                  {/* Spend Mix & Breakdown (Span-7) */}
+                  <SpendMix categoryData={spendMix} />
+                </div>
+
+                {/* Transaction Logs Footer Block */}
+                <RecentCommandLogs
+                  transactions={recentTransactions.filter(txn => {
+                    if (!searchQuery) return true;
+                    const query = searchQuery.toLowerCase().trim();
+                    return (
+                      txn.id.toString().toLowerCase().includes(query) ||
+                      (txn.category || '').toLowerCase().includes(query) ||
+                      (txn.description || '').toLowerCase().includes(query) ||
+                      txn.amount.toString().includes(query) ||
+                      (txn.type || '').toLowerCase().includes(query)
+                    );
+                  })}
+                  onRefresh={fetchDashboardData}
+                />
+              </>
+            )}
           </>
         ) : activeTab === 'analytics' ? (
           <AnalyticsTab searchQuery={searchQuery} />

@@ -115,7 +115,7 @@ export default function Logo({
 
       {/* 2. Vertical Line Separator (Horizontal Layout only) */}
       {!isVertical && (
-        <div className={`w-[1px] ${separatorBg} self-center`} style={{ height: Math.max(16, size * 0.8) }} />
+        <div className={`w-[1px] ${separatorBg} self-center hidden sm:block`} style={{ height: Math.max(16, size * 0.8) }} />
       )}
 
       {/* 3. Text Block */}
@@ -124,7 +124,7 @@ export default function Logo({
           <span className={textCapitalColor}>Capital</span>
           <span className={textLensGradient}>lens</span>
         </h1>
-        <span className={`text-[8px] sm:text-[10px] uppercase tracking-[0.08em] sm:tracking-[0.14em] font-semibold whitespace-nowrap ${isVertical ? 'mt-2.5' : 'mt-1.5'} ${sloganColor}`}>
+        <span className={`text-[8px] sm:text-[10px] uppercase tracking-[0.08em] sm:tracking-[0.14em] font-semibold whitespace-nowrap hidden sm:inline-block ${isVertical ? 'mt-2.5' : 'mt-1.5'} ${sloganColor}`}>
           See Your Capital Clearly
         </span>
       </div>

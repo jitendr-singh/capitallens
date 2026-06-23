@@ -332,7 +332,6 @@ export default function SettingsTab() {
                     Active
                   </span>
                 </div>
-                <p className="text-[10px] text-text-secondary/40 mt-2 italic">Additional themes coming in a future update.</p>
               </div>
             </div>
           )}
@@ -347,19 +346,6 @@ export default function SettingsTab() {
 
               <StatusMsg msg={dataMsg} />
 
-              {/* Data Export */}
-              <div>
-                <h4 className="text-sm font-semibold text-text-primary mb-2">Export Your Data</h4>
-                <p className="text-xs text-text-secondary/50 mb-3">Download a full export of your financial data including transactions, savings goals, and investments.</p>
-                <button
-                  className="px-4 py-2 bg-white/5 border border-glass-border/30 text-text-secondary hover:bg-white/10 hover:text-text-primary rounded-xl text-xs font-bold transition-all flex items-center gap-2"
-                  onClick={() => setDataMsg({ type: 'success', text: 'Data export will be available in a future update.' })}
-                >
-                  <span className="material-symbols-outlined text-[16px]">download</span>
-                  Export All Data (CSV)
-                </button>
-              </div>
-
               {/* Privacy Notice */}
               <div className="p-4 bg-primary/5 border border-primary/15 rounded-xl">
                 <div className="flex items-start gap-3">
@@ -371,26 +357,6 @@ export default function SettingsTab() {
                       Your data is encrypted at rest and in transit.
                     </p>
                   </div>
-                </div>
-              </div>
-
-              {/* Danger Zone */}
-              <div className="pt-4 border-t border-rose-500/20">
-                <h4 className="text-sm font-semibold text-rose-400 mb-3 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">warning</span>
-                  Danger Zone
-                </h4>
-                <div className="p-4 bg-rose-500/5 border border-rose-500/20 rounded-xl space-y-3">
-                  <p className="text-xs text-text-secondary/60">
-                    Deleting your account is permanent and cannot be undone. All your financial data will be erased.
-                  </p>
-                  <button
-                    className="px-4 py-2 bg-rose-500/10 border border-rose-500/25 text-rose-400 hover:bg-rose-500/20 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
-                    onClick={() => setDataMsg({ type: 'error', text: 'Account deletion must be performed by contacting support@capitallens.com' })}
-                  >
-                    <span className="material-symbols-outlined text-[16px]">delete_forever</span>
-                    Delete Account
-                  </button>
                 </div>
               </div>
             </div>

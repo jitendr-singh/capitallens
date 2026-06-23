@@ -63,7 +63,7 @@ export default function WealthGrowthChart({ summaryData }) {
     let active = true;
 
     const loadOfflineFallback = () => {
-      const currentBalance = summaryData?.total_savings ?? 1248592;
+      const currentBalance = summaryData?.total_savings ?? 0;
       let labels = [];
       let deltas = [];
 
@@ -146,7 +146,7 @@ export default function WealthGrowthChart({ summaryData }) {
         } else {
           const labels = response.labels;
           const deltas = response.savings || response.income.map((inc, idx) => inc - (response.expense[idx] || 0));
-          const currentBalance = summaryData?.total_savings ?? 1248592;
+          const currentBalance = summaryData?.total_savings ?? 0;
 
           const trajectory = new Array(deltas.length);
           let runningSavings = currentBalance;
@@ -200,6 +200,7 @@ export default function WealthGrowthChart({ summaryData }) {
 
   const totalValue = trajectory[trajectory.length - 1] ?? 0;
   const currentDelta = deltas[deltas.length - 1] ?? 0;
+  const isDataEmpty = trajectory.length === 0 || trajectory.every(v => v === 0);
 
   // Generate a dynamic timeline range string for subtitle
   const getRangeSubtitle = () => {
@@ -313,181 +314,194 @@ export default function WealthGrowthChart({ summaryData }) {
 
         {/* Hybrid Render Content Area */}
         <div className="relative w-full h-[180px] md:h-[220px]">
-          {activeTimeframe === '7D' ? (
-            /* --- 7D VIEW: Sleek Dynamic Bar Chart --- */
-            <div className="w-full h-full flex items-end justify-between gap-2 md:gap-4 px-2 pb-6 border-b border-glass-border/30">
-              {trajectory.map((val, index) => {
-                const heightPct = ((val - minVal) / range) * 80 + 20; // values scaled between 20% and 100% height
-                const delta = deltas[index];
-
-                return (
-                  <div
-                    key={index}
-                    style={{ height: `${heightPct}%` }}
-                    className="flex-1 bg-gradient-to-t from-primary/10 to-primary/30 hover:from-primary/20 hover:to-primary/50 rounded-t-sm relative group cursor-crosshair transition-all duration-300 border border-primary/15 hover:border-primary/45 hover:shadow-[0_0_12px_rgba(90,240,179,0.1)]"
-                  >
-                    {/* Visual cap border */}
-                    <div className="absolute inset-x-0 top-0 h-[2px] bg-primary rounded-t-sm"></div>
-
-                    {/* Tooltip */}
-                    <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-[#0e1624]/95 border border-primary/30 text-text-primary p-2.5 rounded-xl shadow-2xl pointer-events-none z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap backdrop-blur-md">
-                      <div className="text-[8px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">
-                        {labels[index]}
-                      </div>
-                      <div className="text-[11px] font-extrabold mb-0.5">
-                        Total Savings: <span className="text-primary">{formatCurrency(val)}</span>
-                      </div>
-                      <div className="text-[9px] font-bold text-on-surface-variant/80">
-                        {getDeltaLabel(delta)}: <span className={delta >= 0 ? 'text-primary' : 'text-rose-expense'}>
-                          {delta >= 0 ? '+' : ''}{formatCurrency(delta)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            /* --- 1M / 1Y / MAX VIEWS: Premium SVG Area Curve --- */
-            <div className="w-full h-full relative">
-              {/* SVG Curve */}
-              <svg
-                viewBox="0 0 600 180"
-                preserveAspectRatio="none"
-                className="w-full h-full overflow-visible select-none"
-              >
-                <defs>
-                  {/* Glowing Area Gradient fill */}
-                  <linearGradient id="wealth-gradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#5af0b3" stopOpacity="0.2" />
-                    <stop offset="100%" stopColor="#5af0b3" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-
-                {/* Background Grid Lines */}
-                <line x1="0" y1="20" x2="600" y2="20" stroke="rgba(148, 163, 184, 0.05)" strokeWidth="1" strokeDasharray="3,3" />
-                <line x1="0" y1="90" x2="600" y2="90" stroke="rgba(148, 163, 184, 0.05)" strokeWidth="1" strokeDasharray="3,3" />
-                <line x1="0" y1="160" x2="600" y2="160" stroke="rgba(148, 163, 184, 0.05)" strokeWidth="1" strokeDasharray="3,3" />
-
-                {/* Math Mapping coordinates */}
-                {(() => {
-                  const N = trajectory.length;
-                  const pts = trajectory.map((val, idx) => {
-                    const x = (idx / (N - 1)) * 600;
-                    const y = 160 - ((val - minVal) / range) * 140; // scales curve vertically between y=20 and y=160
-                    return { x, y };
-                  });
-
-                  const lineD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-                  const areaD = `${lineD} L 600 160 L 0 160 Z`;
-
-                  return (
-                    <>
-                      {/* Gradient Fill Path */}
-                      <path d={areaD} fill="url(#wealth-gradient)" />
-                      {/* Glowing Line Path */}
-                      <path
-                        d={lineD}
-                        fill="none"
-                        stroke="#5af0b3"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="drop-shadow-[0_0_4px_rgba(90,240,179,0.3)]"
-                      />
-
-                      {/* Snap Crosshair Guide */}
-                      {hoveredIdx !== null && pts[hoveredIdx] && (
-                        <>
-                          <line
-                            x1={pts[hoveredIdx].x}
-                            y1="20"
-                            x2={pts[hoveredIdx].x}
-                            y2="160"
-                            stroke="rgba(90, 240, 179, 0.2)"
-                            strokeWidth="1.5"
-                            strokeDasharray="3,3"
-                          />
-                          <circle
-                            cx={pts[hoveredIdx].x}
-                            cy={pts[hoveredIdx].y}
-                            r="5"
-                            fill="#5af0b3"
-                            className="drop-shadow-[0_0_8px_#5af0b3]"
-                          />
-                          <circle
-                            cx={pts[hoveredIdx].x}
-                            cy={pts[hoveredIdx].y}
-                            r="9"
-                            fill="none"
-                            stroke="rgba(90, 240, 179, 0.3)"
-                            strokeWidth="1.5"
-                          />
-                        </>
-                      )}
-
-                      {/* Invisible segments overlays for magnetic click/hover snap */}
-                      {pts.map((p, i) => {
-                        const segWidth = 600 / N;
-                        const startX = p.x - segWidth / 2;
-                        return (
-                          <rect
-                            key={i}
-                            x={Math.max(0, startX)}
-                            y="0"
-                            width={segWidth}
-                            height="160"
-                            fill="transparent"
-                            className="cursor-crosshair"
-                            onMouseMove={() => setHoveredIdx(i)}
-                            onMouseLeave={() => setHoveredIdx(null)}
-                            onTouchMove={(e) => {
-                              const touch = e.touches[0];
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              const touchX = touch.clientX - rect.left;
-                              const pct = Math.min(1, Math.max(0, touchX / rect.width));
-                              const idx = Math.min(N - 1, Math.floor(pct * N));
-                              setHoveredIdx(idx);
-                            }}
-                            onTouchEnd={() => setHoveredIdx(null)}
-                          />
-                        );
-                      })}
-                    </>
-                  );
-                })()}
-              </svg>
-
-              {/* Dynamic Floating Tooltip */}
-              {hoveredIdx !== null && trajectory[hoveredIdx] !== undefined && (
-                <div
-                  style={{
-                    left: `${(hoveredIdx / (trajectory.length - 1)) * 100}%`,
-                    transform: `translateX(${(hoveredIdx / (trajectory.length - 1)) > 0.8
-                        ? '-100%'
-                        : (hoveredIdx / (trajectory.length - 1)) < 0.2
-                          ? '0%'
-                          : '-50%'
-                      })`,
-                    top: `${Math.max(10, 140 - ((trajectory[hoveredIdx] - minVal) / range) * 140 - 72)}px`
-                  }}
-                  className="absolute bg-[#0f172a]/95 border border-[#5af0b3]/30 rounded-xl p-3 shadow-2xl z-30 pointer-events-none transition-all duration-150 backdrop-blur-md text-left"
-                >
-                  <div className="text-[8px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">
-                    {labels[hoveredIdx]}
-                  </div>
-                  <div className="text-[11px] font-extrabold text-text-primary mb-0.5 whitespace-nowrap">
-                    Total Savings: <span className="text-primary">{formatCurrency(trajectory[hoveredIdx])}</span>
-                  </div>
-                  <div className="text-[9px] font-bold text-on-surface-variant/80 whitespace-nowrap">
-                    {getDeltaLabel(deltas[hoveredIdx])}: <span className={deltas[hoveredIdx] >= 0 ? 'text-primary' : 'text-rose-expense'}>
-                      {deltas[hoveredIdx] >= 0 ? '+' : ''}{formatCurrency(deltas[hoveredIdx])}
-                    </span>
-                  </div>
-                </div>
-              )}
+          {isDataEmpty && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-slate-950/60 backdrop-blur-sm rounded-xl border border-glass-border/30 z-[15] animate-fade-in">
+              <span className="material-symbols-outlined text-[36px] text-primary/60 mb-2 animate-pulse">
+                insights
+              </span>
+              <h4 className="font-bold text-sm text-text-primary mb-1">No Wealth Trajectory Data</h4>
+              <p className="text-[11px] text-on-surface-variant/70 max-w-xs leading-relaxed">
+                Add transaction entries or configure your investments to map your personal wealth growth trajectory.
+              </p>
             </div>
           )}
+          <div className={`w-full h-full ${isDataEmpty ? 'opacity-15 pointer-events-none' : ''}`}>
+            {activeTimeframe === '7D' ? (
+              /* --- 7D VIEW: Sleek Dynamic Bar Chart --- */
+              <div className="w-full h-full flex items-end justify-between gap-2 md:gap-4 px-2 pb-6 border-b border-glass-border/30">
+                {trajectory.map((val, index) => {
+                  const heightPct = ((val - minVal) / range) * 80 + 20; // values scaled between 20% and 100% height
+                  const delta = deltas[index];
+
+                  return (
+                    <div
+                      key={index}
+                      style={{ height: `${heightPct}%` }}
+                      className="flex-1 bg-gradient-to-t from-primary/10 to-primary/30 hover:from-primary/20 hover:to-primary/50 rounded-t-sm relative group cursor-crosshair transition-all duration-300 border border-primary/15 hover:border-primary/45 hover:shadow-[0_0_12px_rgba(90,240,179,0.1)]"
+                    >
+                      {/* Visual cap border */}
+                      <div className="absolute inset-x-0 top-0 h-[2px] bg-primary rounded-t-sm"></div>
+
+                      {/* Tooltip */}
+                      <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-[#0e1624]/95 border border-primary/30 text-text-primary p-2.5 rounded-xl shadow-2xl pointer-events-none z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap backdrop-blur-md">
+                        <div className="text-[8px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">
+                          {labels[index]}
+                        </div>
+                        <div className="text-[11px] font-extrabold mb-0.5">
+                          Total Savings: <span className="text-primary">{formatCurrency(val)}</span>
+                        </div>
+                        <div className="text-[9px] font-bold text-on-surface-variant/80">
+                          {getDeltaLabel(delta)}: <span className={delta >= 0 ? 'text-primary' : 'text-rose-expense'}>
+                            {delta >= 0 ? '+' : ''}{formatCurrency(delta)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* --- 1M / 1Y / MAX VIEWS: Premium SVG Area Curve --- */
+              <div className="w-full h-full relative">
+                {/* SVG Curve */}
+                <svg
+                  viewBox="0 0 600 180"
+                  preserveAspectRatio="none"
+                  className="w-full h-full overflow-visible select-none"
+                >
+                  <defs>
+                    {/* Glowing Area Gradient fill */}
+                    <linearGradient id="wealth-gradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#5af0b3" stopOpacity="0.2" />
+                      <stop offset="100%" stopColor="#5af0b3" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Background Grid Lines */}
+                  <line x1="0" y1="20" x2="600" y2="20" stroke="rgba(148, 163, 184, 0.05)" strokeWidth="1" strokeDasharray="3,3" />
+                  <line x1="0" y1="90" x2="600" y2="90" stroke="rgba(148, 163, 184, 0.05)" strokeWidth="1" strokeDasharray="3,3" />
+                  <line x1="0" y1="160" x2="600" y2="160" stroke="rgba(148, 163, 184, 0.05)" strokeWidth="1" strokeDasharray="3,3" />
+
+                  {/* Math Mapping coordinates */}
+                  {(() => {
+                    const N = trajectory.length;
+                    const pts = trajectory.map((val, idx) => {
+                      const x = (idx / (N - 1)) * 600;
+                      const y = 160 - ((val - minVal) / range) * 140; // scales curve vertically between y=20 and y=160
+                      return { x, y };
+                    });
+
+                    const lineD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                    const areaD = `${lineD} L 600 160 L 0 160 Z`;
+
+                    return (
+                      <>
+                        {/* Gradient Fill Path */}
+                        <path d={areaD} fill="url(#wealth-gradient)" />
+                        {/* Glowing Line Path */}
+                        <path
+                          d={lineD}
+                          fill="none"
+                          stroke="#5af0b3"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="drop-shadow-[0_0_4px_rgba(90,240,179,0.3)]"
+                        />
+
+                        {/* Snap Crosshair Guide */}
+                        {hoveredIdx !== null && pts[hoveredIdx] && (
+                          <>
+                            <line
+                              x1={pts[hoveredIdx].x}
+                              y1="20"
+                              x2={pts[hoveredIdx].x}
+                              y2="160"
+                              stroke="rgba(90, 240, 179, 0.2)"
+                              strokeWidth="1.5"
+                              strokeDasharray="3,3"
+                            />
+                            <circle
+                              cx={pts[hoveredIdx].x}
+                              cy={pts[hoveredIdx].y}
+                              r="5"
+                              fill="#5af0b3"
+                              className="drop-shadow-[0_0_8px_#5af0b3]"
+                            />
+                            <circle
+                              cx={pts[hoveredIdx].x}
+                              cy={pts[hoveredIdx].y}
+                              r="9"
+                              fill="none"
+                              stroke="rgba(90, 240, 179, 0.3)"
+                              strokeWidth="1.5"
+                            />
+                          </>
+                        )}
+
+                        {/* Invisible segments overlays for magnetic click/hover snap */}
+                        {pts.map((p, i) => {
+                          const segWidth = 600 / N;
+                          const startX = p.x - segWidth / 2;
+                          return (
+                            <rect
+                              key={i}
+                              x={Math.max(0, startX)}
+                              y="0"
+                              width={segWidth}
+                              height="160"
+                              fill="transparent"
+                              className="cursor-crosshair"
+                              onMouseMove={() => setHoveredIdx(i)}
+                              onMouseLeave={() => setHoveredIdx(null)}
+                              onTouchMove={(e) => {
+                                const touch = e.touches[0];
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const touchX = touch.clientX - rect.left;
+                                const pct = Math.min(1, Math.max(0, touchX / rect.width));
+                                const idx = Math.min(N - 1, Math.floor(pct * N));
+                                setHoveredIdx(idx);
+                              }}
+                              onTouchEnd={() => setHoveredIdx(null)}
+                            />
+                          );
+                        })}
+                      </>
+                    );
+                  })()}
+                </svg>
+
+                {/* Dynamic Floating Tooltip */}
+                {hoveredIdx !== null && trajectory[hoveredIdx] !== undefined && (
+                  <div
+                    style={{
+                      left: `${(hoveredIdx / (trajectory.length - 1)) * 100}%`,
+                      transform: `translateX(${(hoveredIdx / (trajectory.length - 1)) > 0.8
+                          ? '-100%'
+                          : (hoveredIdx / (trajectory.length - 1)) < 0.2
+                            ? '0%'
+                            : '-50%'
+                        })`,
+                      top: `${Math.max(10, 140 - ((trajectory[hoveredIdx] - minVal) / range) * 140 - 72)}px`
+                    }}
+                    className="absolute bg-[#0f172a]/95 border border-[#5af0b3]/30 rounded-xl p-3 shadow-2xl z-30 pointer-events-none transition-all duration-150 backdrop-blur-md text-left"
+                  >
+                    <div className="text-[8px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">
+                      {labels[hoveredIdx]}
+                    </div>
+                    <div className="text-[11px] font-extrabold text-text-primary mb-0.5 whitespace-nowrap">
+                      Total Savings: <span className="text-primary">{formatCurrency(trajectory[hoveredIdx])}</span>
+                    </div>
+                    <div className="text-[9px] font-bold text-on-surface-variant/80 whitespace-nowrap">
+                      {getDeltaLabel(deltas[hoveredIdx])}: <span className={deltas[hoveredIdx] >= 0 ? 'text-primary' : 'text-rose-expense'}>
+                        {deltas[hoveredIdx] >= 0 ? '+' : ''}{formatCurrency(deltas[hoveredIdx])}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* X-Axis Scale Guides */}

@@ -135,7 +135,7 @@ export default function LandingPage({ onEnterConsole }) {
   const cyanIconBg = theme === 'dark' ? 'bg-[#00cbe6]/10 text-[#00cbe6]' : 'bg-cyan-100 text-cyan-800';
 
   return (
-    <div className={`min-h-screen w-screen relative overflow-x-hidden transition-colors duration-300 ${bgClass}`}>
+    <div className={`min-h-screen w-full relative overflow-x-hidden transition-colors duration-300 ${bgClass}`}>
       
       {/* Background ambient grids */}
       <div className="fixed inset-0 scanning-grid pointer-events-none z-0 opacity-40"></div>
@@ -143,27 +143,27 @@ export default function LandingPage({ onEnterConsole }) {
       <div className="ambient-orb bg-violet-accent w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bottom-0 right-0 opacity-10 pointer-events-none"></div>
 
       {/* Modern Header */}
-      <header className={`w-full py-4 px-6 md:px-12 border-b backdrop-blur-md fixed top-0 left-0 z-50 flex items-center justify-between transition-colors duration-300 ${headerBg}`}>
-        <Logo size={36} textClass="text-2xl md:text-3xl" variant={theme === 'light' ? 'light' : 'primary'} />
+      <header className={`w-full py-3.5 px-3 md:px-12 border-b backdrop-blur-md fixed top-0 left-0 z-50 flex items-center justify-between transition-colors duration-300 ${headerBg}`}>
+        <Logo size={30} textClass="text-lg sm:text-2xl md:text-3xl" variant={theme === 'light' ? 'light' : 'primary'} />
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-4">
           {/* Light/Dark Toggle */}
           <button 
             onClick={toggleTheme}
             className={`p-2 rounded-full border transition-all hover:scale-105 active:scale-95 cursor-pointer ${theme === 'dark' ? 'border-slate-800 text-primary bg-slate-900/60' : 'border-slate-200 text-slate-700 bg-slate-100'}`}
             title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
           >
-            <span className="material-symbols-outlined text-[18px]">
+            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">
               {theme === 'dark' ? 'light_mode' : 'dark_mode'}
             </span>
           </button>
 
           <button
             onClick={onEnterConsole}
-            className="px-5 py-2 bg-primary text-on-primary hover:brightness-110 active:scale-95 transition-all rounded-lg font-bold text-xs tracking-wider shadow-lg shadow-primary/10 flex items-center gap-1.5 cursor-pointer border-none"
+            className="px-2.5 sm:px-5 py-2 bg-primary text-on-primary hover:brightness-110 active:scale-95 transition-all rounded-lg font-bold text-[10px] sm:text-xs tracking-wider shadow-lg shadow-primary/10 flex items-center gap-1 cursor-pointer border-none"
           >
-            <span>Vault Console</span>
-            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            <span>Enter Vault</span>
+            <span className="material-symbols-outlined text-xs">arrow_forward</span>
           </button>
         </div>
       </header>
@@ -303,7 +303,7 @@ export default function LandingPage({ onEnterConsole }) {
               <span className={`material-symbols-outlined text-[32px] p-2 rounded-xl ${primaryIconBg}`}>chat_bubble</span>
               <h3 className="font-bold text-lg">AI Financial Copilot</h3>
               <p className={`text-xs leading-relaxed ${descOpacityClass}`}>
-                Discuss budgets, active savings goals, compound interest rates, and trade ideas. Run securely on Google Gemini 2.0 / 3.1 Flash.
+                Discuss budgets, active savings goals, compound interest rates, and allocation strategies. Run securely with privacy-focused AI models.
               </p>
             </div>
             <span className={`pt-4 text-xs font-bold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1 ${linkPrimaryClass}`}>
@@ -345,7 +345,7 @@ export default function LandingPage({ onEnterConsole }) {
               <span className={`material-symbols-outlined text-[32px] p-2 rounded-xl ${primaryIconBg}`}>lock</span>
               <h3 className="font-bold text-lg">AES-256 Vault Encryption</h3>
               <p className={`text-xs leading-relaxed ${descOpacityClass}`}>
-                Your credentials and accounts remain encrypted on your device. We use read-only queries so your funds cannot be moved.
+                Your transaction logs and savings targets remain encrypted on your device. We store all data locally to ensure absolute privacy.
               </p>
             </div>
             <span className={`pt-4 text-xs font-bold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1 ${linkPrimaryClass}`}>
@@ -620,9 +620,9 @@ export default function LandingPage({ onEnterConsole }) {
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg mx-auto shadow-md border ${
               theme === 'dark' ? 'bg-slate-900 border-slate-800 text-primary' : 'bg-white border-slate-200 text-emerald-700'
             }`}>1</div>
-            <h3 className="font-bold text-base">Connect Vault Accounts</h3>
+            <h3 className="font-bold text-base">Input Financial Records</h3>
             <p className={`text-xs max-w-xs mx-auto leading-relaxed ${descTextClass}`}>
-              Connect your expense history, bank logs, or mutual fund accounts securely using read-only API connectors.
+              Record your transactions, savings goals, and mutual fund positions manually inside the secure vault console.
             </p>
           </div>
 
@@ -633,9 +633,9 @@ export default function LandingPage({ onEnterConsole }) {
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg mx-auto shadow-md border ${
               theme === 'dark' ? 'bg-slate-900 border-slate-800 text-secondary' : 'bg-white border-slate-200 text-blue-700'
             }`}>2</div>
-            <h3 className="font-bold text-base">AI Analysis Scanning</h3>
+            <h3 className="font-bold text-base">AI Copilot Analysis</h3>
             <p className={`text-xs max-w-xs mx-auto leading-relaxed ${descTextClass}`}>
-              Google Gemini engines scan your unallocated cash pools and expense trends to generate compound growth advisory suggestions.
+              The intelligent assistant scans your transaction logs and investment timelines to suggest smart compound allocation advice.
             </p>
           </div>
 
@@ -667,24 +667,24 @@ export default function LandingPage({ onEnterConsole }) {
                 <span className="material-symbols-outlined text-[14px]">lock</span> Encryption Enforced
               </span>
               <h3 className={`text-2xl sm:text-3xl font-extrabold tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                Bank-Grade Security & Read-Only Privacy Safeguards
+                Local-First Privacy & Encrypted Data Safeguards
               </h3>
               <p className={`text-xs sm:text-sm leading-relaxed ${descTextClass}`}>
-                CapitalLens operates strictly on a read-only data layer. We implement state-of-the-art security patterns to guarantee your capital and credentials remain confidential:
+                CapitalLens operates strictly on a private, local-first model. We implement device-level encryption to guarantee that your financial logs and plans remain confidential:
               </p>
               
               <ul className="space-y-3.5 pt-2">
                 <li className={`flex items-start gap-2.5 text-xs ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
                   <span className={`material-symbols-outlined text-sm mt-0.5 ${primaryTextClass}`}>check_circle</span>
-                  <span><strong>AES-256 Local Encryption</strong>: Credentials stored securely inside your device database.</span>
+                  <span><strong>AES-256 Local Encryption</strong>: All transaction logs and plans are stored securely in your device browser sandbox.</span>
                 </li>
                 <li className={`flex items-start gap-2.5 text-xs ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
                   <span className={`material-symbols-outlined text-sm mt-0.5 ${primaryTextClass}`}>check_circle</span>
-                  <span><strong>Zero Funds Movement Capability</strong>: Our connectors possess read-only flags; we cannot initiate trades or withdrawals.</span>
+                  <span><strong>Zero Direct Fund Connections</strong>: We never link directly to your banks or brokerage accounts, guaranteeing zero risk.</span>
                 </li>
                 <li className={`flex items-start gap-2.5 text-xs ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
                   <span className={`material-symbols-outlined text-sm mt-0.5 ${primaryTextClass}`}>check_circle</span>
-                  <span><strong>SEBI Alignment Warnings</strong>: Intelligent notifications keep you advised of market risks and diversification limits.</span>
+                  <span><strong>Diversification Alerts</strong>: Intelligent feedback keeps you advised of asset concentration risk and budget gaps.</span>
                 </li>
               </ul>
             </div>
@@ -692,14 +692,14 @@ export default function LandingPage({ onEnterConsole }) {
             <div className="lg:col-span-5 flex justify-center">
               <div className="p-8 bg-slate-950/80 rounded-2xl border border-glass-border/30 text-center relative max-w-sm w-full">
                 <span className="material-symbols-outlined text-primary text-[56px] mb-3 animate-pulse">shield_lock</span>
-                <h4 className="font-extrabold text-sm uppercase tracking-widest text-slate-200">Security Certificate</h4>
+                <h4 className="font-extrabold text-sm uppercase tracking-widest text-slate-200">Security Parameters</h4>
                 <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
-                  Encryption Layer: v3.2 SSL Enforced<br/>
+                  Data Privacy: AES-256 Local Storage<br/>
                   Data Storage: Sandbox Encrypted<br/>
-                  Connector Audits: Quarterly Verified
+                  Audit Integrity: Zero External Transmission
                 </p>
                 <div className="mt-4 pt-3 border-t border-glass-border/20 text-[9px] uppercase tracking-wider font-bold text-primary">
-                  100% Secure read-only database
+                  100% Private local-first storage
                 </div>
               </div>
             </div>
@@ -724,13 +724,13 @@ export default function LandingPage({ onEnterConsole }) {
           {/* Testimonial 1 */}
           <div className={`p-6 rounded-2xl border flex flex-col justify-between space-y-6 ${glassCardClass}`}>
             <p className={`text-xs leading-relaxed italic ${descOpacityClass}`}>
-              "CapitalLens completely changed how I manage my startup's reserve cash flow and personal portfolio. The AI simulator helps me model Compound Horzions effortlessly, and the UI is incredibly slick."
+              "I've tried complex spreadsheets and over-engineered budget apps, but CapitalLens gets it right. Logging transactions manually takes seconds, and the compounding growth calculator helps me clearly visualize my long-term targets."
             </p>
             <div className="flex items-center gap-3 border-t border-glass-border/20 pt-4 text-left">
-              <div className={`h-8 w-8 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center font-bold text-[11px] ${primaryTextClass}`}>AR</div>
+              <div className={`h-8 w-8 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center font-bold text-[11px] ${primaryTextClass}`}>RP</div>
               <div>
-                <h4 className="font-bold text-xs">Arjun Rao</h4>
-                <p className={`text-[9px] ${descTextClass}`}>Tech Founder & Angel Investor</p>
+                <h4 className="font-bold text-xs">Ryan Parker</h4>
+                <p className={`text-[9px] ${descTextClass}`}>Software Engineer</p>
               </div>
             </div>
           </div>
@@ -738,13 +738,13 @@ export default function LandingPage({ onEnterConsole }) {
           {/* Testimonial 2 */}
           <div className={`p-6 rounded-2xl border flex flex-col justify-between space-y-6 ${glassCardClass}`}>
             <p className={`text-xs leading-relaxed italic ${descOpacityClass}`}>
-              "The ability to toggle between USD and INR instantly is huge for my overseas holdings. The interface is clean, minimal, and doesn't get cluttered with useless visual noise. Bank-grade read-only security gives me total peace of mind."
+              "The local-first approach is exactly what I wanted. I don't feel comfortable linking my bank credentials to random websites. Here, my data stays local and encrypted, and I can still query the AI assistant to analyze my manual savings logs."
             </p>
             <div className="flex items-center gap-3 border-t border-glass-border/20 pt-4 text-left">
-              <div className={`h-8 w-8 rounded-full bg-gradient-to-br from-secondary/30 to-violet-accent/30 flex items-center justify-center font-bold text-[11px] ${secondaryTextClass}`}>MS</div>
+              <div className={`h-8 w-8 rounded-full bg-gradient-to-br from-secondary/30 to-violet-accent/30 flex items-center justify-center font-bold text-[11px] ${secondaryTextClass}`}>SJ</div>
               <div>
-                <h4 className="font-bold text-xs">Meera Sharma</h4>
-                <p className={`text-[9px] ${descTextClass}`}>VP of Finance, SaaS Capital</p>
+                <h4 className="font-bold text-xs">Sarah Jenkins</h4>
+                <p className={`text-[9px] ${descTextClass}`}>Independent Consultant</p>
               </div>
             </div>
           </div>
@@ -752,13 +752,13 @@ export default function LandingPage({ onEnterConsole }) {
           {/* Testimonial 3 */}
           <div className={`p-6 rounded-2xl border flex flex-col justify-between space-y-6 ${glassCardClass}`}>
             <p className={`text-xs leading-relaxed italic ${descOpacityClass}`}>
-              "I love the scenario optimizer! Having an AI analyze budget anomalies and idle cash yields with a single click saves me hours of sheets compiling. It's the cleanest wealth command engine out there."
+              "Toggling between USD and INR is extremely handy. The dashboard gives me a clean, distraction-free interface to track my mutual funds, verify budget targets, and keep my spending limits in check."
             </p>
             <div className="flex items-center gap-3 border-t border-glass-border/20 pt-4 text-left">
-              <div className={`h-8 w-8 rounded-full bg-gradient-to-br from-violet-accent/30 to-primary/30 flex items-center justify-center font-bold text-[11px] ${linkVioletClass}`}>DK</div>
+              <div className={`h-8 w-8 rounded-full bg-gradient-to-br from-violet-accent/30 to-primary/30 flex items-center justify-center font-bold text-[11px] ${linkVioletClass}`}>AS</div>
               <div>
-                <h4 className="font-bold text-xs">Dev Kar</h4>
-                <p className={`text-[9px] ${descTextClass}`}>Quantitative Researcher</p>
+                <h4 className="font-bold text-xs">Aditya Sharma</h4>
+                <p className={`text-[9px] ${descTextClass}`}>Individual Retail Investor</p>
               </div>
             </div>
           </div>
@@ -880,98 +880,7 @@ export default function LandingPage({ onEnterConsole }) {
         </div>
       </section>
 
-      {/* Section 7: Pricing Plans */}
-      <section className="py-20 px-6 md:px-12 max-w-7xl mx-auto relative z-10 border-t border-glass-border/10">
-        <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-          <span className={`text-xs font-bold uppercase tracking-widest px-3.5 py-1.5 rounded-full ${badgeVioletClass}`}>💳 Flexible Plans</span>
-          <h2 className={`font-display-lg text-3xl md:text-5xl font-extrabold tracking-tighter ${headingClass}`}>
-            Pricing Suited For Your Scale
-          </h2>
-          <p className={`text-sm sm:text-base max-w-2xl mx-auto ${subheadingClass}`}>
-            Free manual controls or automated AI advisory commands. Upgrade or downgrade at any time.
-          </p>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto items-stretch">
-          
-          {/* Free Tier */}
-          <div className={`p-6 sm:p-8 rounded-2xl border flex flex-col justify-between relative overflow-hidden text-left ${glassCardClass}`}>
-            <div className="space-y-6">
-              <div>
-                <span className="px-2.5 py-1 bg-slate-900 border border-slate-800 rounded text-[9px] font-bold text-slate-400 uppercase tracking-widest">Base Tier</span>
-                <h3 className="text-xl font-bold mt-2">Capital Free</h3>
-                <p className={`text-xs mt-1 ${descTextClass}`}>Core budgeting & manual cash logging tools.</p>
-              </div>
-
-              <div className="border-t border-glass-border/15 pt-4">
-                <span className={`text-3xl font-extrabold font-outfit ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>₹0</span>
-                <span className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}> / forever free</span>
-              </div>
-
-              <ul className="space-y-3 pt-2 text-xs">
-                <li className="flex items-center gap-2"><span className={`material-symbols-outlined text-sm ${primaryTextClass}`}>check</span> Manual transaction logger</li>
-                <li className="flex items-center gap-2"><span className={`material-symbols-outlined text-sm ${primaryTextClass}`}>check</span> 3 Active savings goals</li>
-                <li className="flex items-center gap-2"><span className={`material-symbols-outlined text-sm ${primaryTextClass}`}>check</span> Local encryption protection</li>
-                <li className="flex items-center gap-2"><span className="material-symbols-outlined text-slate-600 text-sm">close</span> <span className="text-slate-500">Automated AI Copilot suggestions</span></li>
-                <li className="flex items-center gap-2"><span className="material-symbols-outlined text-slate-600 text-sm">close</span> <span className="text-slate-500">Real-time stock valuation syncing</span></li>
-              </ul>
-            </div>
-
-            <button
-              onClick={onEnterConsole}
-              className="mt-8 w-full py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer border-none"
-            >
-              Start Free Command
-            </button>
-          </div>
-
-          {/* Pro Tier */}
-          <div className={`p-6 sm:p-8 rounded-2xl border flex flex-col justify-between relative overflow-hidden text-left transition-all ${
-            theme === 'dark' 
-              ? 'bg-gradient-to-b from-[#0a1226] to-[#04060b] border-primary/40 text-[#dde2f3] hover:shadow-[0_12px_40px_rgba(0,196,154,0.06)]' 
-              : 'bg-white border-emerald-300 text-slate-900 shadow-md hover:shadow-lg'
-          }`}>
-            
-            {/* Best Value badge */}
-            <div className={`absolute top-0 right-0 text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-bl-lg ${
-              theme === 'dark' ? 'bg-primary text-on-primary' : 'bg-emerald-600 text-white'
-            }`}>
-              Advisory active
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <span className={`px-2.5 py-1 rounded text-[9px] font-bold uppercase tracking-widest ${
-                  theme === 'dark' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-emerald-100 border border-emerald-300 text-emerald-800'
-                }`}>Enterprise Premium</span>
-                <h3 className="text-xl font-bold mt-2">Capital Pro</h3>
-                <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>Full AI-advisory, live integrations & alerts.</p>
-              </div>
-
-              <div className="border-t border-glass-border/15 pt-4">
-                <span className={`text-3xl font-extrabold font-outfit ${theme === 'dark' ? 'text-white' : 'text-slate-950'}`}>₹499</span>
-                <span className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}> / month</span>
-              </div>
-
-              <ul className="space-y-3 pt-2 text-xs">
-                <li className="flex items-center gap-2"><span className={`material-symbols-outlined text-sm ${primaryTextClass}`}>check</span> Unlimited active savings goals</li>
-                <li className="flex items-center gap-2"><span className={`material-symbols-outlined text-sm ${primaryTextClass}`}>check</span> Automated AI Copilot suggestions</li>
-                <li className="flex items-center gap-2"><span className={`material-symbols-outlined text-sm ${primaryTextClass}`}>check</span> Real-time stock / mutual fund syncing</li>
-                <li className="flex items-center gap-2"><span className={`material-symbols-outlined text-sm ${primaryTextClass}`}>check</span> Smart savings & idle cash alerts</li>
-                <li className="flex items-center gap-2"><span className={`material-symbols-outlined text-sm ${primaryTextClass}`}>check</span> Secure multi-device cloud backup</li>
-              </ul>
-            </div>
-
-            <button
-              onClick={onEnterConsole}
-              className="mt-8 w-full py-3 bg-primary text-on-primary hover:brightness-110 active:scale-95 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer border-none"
-            >
-              Start Pro 14-Day Trial
-            </button>
-          </div>
-
-        </div>
-      </section>
 
       {/* Section 8: FAQ Accordion */}
       <section className="py-20 px-6 md:px-12 max-w-7xl mx-auto relative z-10 border-t border-glass-border/10">
@@ -1056,7 +965,7 @@ export default function LandingPage({ onEnterConsole }) {
         </div>
         <div className="flex gap-6 font-bold uppercase tracking-wider">
           <a href="#" className="hover:text-primary transition-all">Privacy Policy</a>
-          <a href="#" className="hover:text-primary transition-all">Terms of Console</a>
+          <a href="#" className="hover:text-primary transition-all">Terms of Service</a>
           <a href="#" className="hover:text-primary transition-all text-[#fb7185]">SEBI Disclaimer</a>
         </div>
       </footer>

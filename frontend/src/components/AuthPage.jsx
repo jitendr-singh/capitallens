@@ -12,6 +12,7 @@ export default function AuthPage({ onBackToLanding }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Status states
   const [errorMsg, setErrorMsg] = useState(null);
@@ -22,21 +23,32 @@ export default function AuthPage({ onBackToLanding }) {
     e.preventDefault();
     setErrorMsg(null);
 
+    const emailTrim = email.trim();
+    const passwordTrim = password.trim();
+
     // Validation
-    if (!email.trim() || !password.trim()) {
+    if (!emailTrim || !passwordTrim) {
       setErrorMsg('Please enter both your email and password.');
       return;
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailTrim)) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+
     if (!isLogin && !name.trim()) {
       setErrorMsg('Please enter your full name to create an account.');
       return;
     }
+
     if (!isLogin) {
-      if (password.length < 8) {
+      if (passwordTrim.length < 8) {
         setErrorMsg('Password must be at least 8 characters long.');
         return;
       }
-      if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password)) {
+      if (!/[a-z]/.test(passwordTrim) || !/[A-Z]/.test(passwordTrim) || !/\d/.test(passwordTrim)) {
         setErrorMsg('Password must contain at least one uppercase letter, one lowercase letter, and one number.');
         return;
       }
@@ -45,9 +57,9 @@ export default function AuthPage({ onBackToLanding }) {
     setAuthLoading(true);
     try {
       if (isLogin) {
-        await login(email, password);
+        await login(emailTrim, passwordTrim);
       } else {
-        await register(name, email, password);
+        await register(name.trim(), emailTrim, passwordTrim);
       }
     } catch (err) {
       console.error('Authentication request failed:', err);
@@ -56,7 +68,7 @@ export default function AuthPage({ onBackToLanding }) {
         setErrorMsg('Incorrect email or password. Please try again.');
       } else if (msg.includes('already registered') || msg.includes('400')) {
         setErrorMsg('This email address is already registered. Please sign in instead.');
-      } else if (msg.includes('timed out') || msg.includes('Connection')) {
+      } else if (msg.includes('timed out') || msg.includes('Connection') || msg.toLowerCase().includes('fetch')) {
         setErrorMsg('Could not connect to server. Please ensure the backend is running.');
       } else {
         setErrorMsg(msg || 'Something went wrong. Please try again.');
@@ -67,7 +79,7 @@ export default function AuthPage({ onBackToLanding }) {
   };
 
   return (
-    <div className="min-h-screen w-screen bg-[#030712] text-[#dde2f3] flex flex-col items-center justify-center p-4 relative overflow-hidden font-body-base">
+    <div className="min-h-screen w-full bg-[#030712] text-[#dde2f3] flex flex-col items-center justify-center p-4 relative overflow-hidden font-body-base">
 
       {/* Ambient background glows */}
       <div className="fixed inset-0 scanning-grid pointer-events-none z-0"></div>
@@ -144,7 +156,7 @@ export default function AuthPage({ onBackToLanding }) {
         )}
 
         {/* Input Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
 
           {/* Full Name Input (Register Only) */}
           {!isLogin && (
@@ -202,29 +214,27 @@ export default function AuthPage({ onBackToLanding }) {
               </span>
               <input
                 id="auth-password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete={isLogin ? 'current-password' : 'new-password'}
-                className="w-full bg-[#05070f] border border-glass-border rounded-xl pl-10 pr-4 py-3 text-xs md:text-sm font-medium text-text-primary outline-none focus:border-primary/70 transition-all font-body placeholder:text-on-surface-variant/40"
+                className="w-full bg-[#05070f] border border-glass-border rounded-xl pl-10 pr-10 py-3 text-xs md:text-sm font-medium text-text-primary outline-none focus:border-primary/70 transition-all font-body placeholder:text-on-surface-variant/40"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-2.5 text-on-surface-variant/70 hover:text-text-primary focus:outline-none cursor-pointer flex items-center justify-center h-[34px] w-[30px]"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <span className="material-symbols-outlined text-[18px] select-none">
+                  {showPassword ? 'visibility' : 'visibility_off'}
+                </span>
+              </button>
             </div>
           </div>
 
-          {/* Forgot Password (Login only) */}
-          {isLogin && (
-            <div className="text-right">
-              <button
-                type="button"
-                className="text-[10px] text-primary/70 hover:text-primary transition-all underline decoration-dotted cursor-pointer"
-                onClick={() => setErrorMsg('Password reset is coming soon. Please contact support.')}
-              >
-                Forgot Password?
-              </button>
-            </div>
-          )}
 
           {/* Action Submit Button */}
           <button

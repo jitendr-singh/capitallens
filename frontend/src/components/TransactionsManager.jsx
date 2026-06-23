@@ -90,23 +90,15 @@ export default function TransactionsManager({ searchQuery }) {
         transactionService.getTransactions({ limit: 100 })
       ]);
 
-      const hasRealSummary = summary && (summary.total_income > 0 || summary.total_expense > 0);
-      const hasRealList = list && list.length > 0;
+      setSummaryData(summary || {
+        total_income: 0.0,
+        total_expense: 0.0,
+        total_savings: 0.0,
+        savings_rate: 0.0,
+        transaction_count: 0
+      });
 
-      // Merge real backend data or fallback to mockup objects
-      if (hasRealSummary) {
-        setSummaryData({
-          total_income: summary.total_income,
-          total_expense: summary.total_expense,
-          total_savings: summary.total_savings,
-          savings_rate: summary.savings_rate,
-          transaction_count: list.length > 0 ? list.length : mockSummary.transaction_count
-        });
-      } else {
-        setSummaryData(mockSummary);
-      }
-
-      if (hasRealList) {
+      if (list && list.length > 0) {
         // Map backend objects to frontend columns format
         const formattedList = list.map(item => ({
           id: item.id,
@@ -119,12 +111,18 @@ export default function TransactionsManager({ searchQuery }) {
         }));
         setTransactions(formattedList);
       } else {
-        setTransactions(mockTransactions);
+        setTransactions([]);
       }
     } catch (err) {
-      console.warn('Failed to load transaction manager from API, using high-fidelity mockup fallback.', err);
-      setSummaryData(mockSummary);
-      setTransactions(mockTransactions);
+      console.warn('Failed to load transaction manager from API.', err);
+      setSummaryData({
+        total_income: 0.0,
+        total_expense: 0.0,
+        total_savings: 0.0,
+        savings_rate: 0.0,
+        transaction_count: 0
+      });
+      setTransactions([]);
     } finally {
       setLoading(false);
     }
@@ -158,12 +156,6 @@ export default function TransactionsManager({ searchQuery }) {
 
   // Handle Delete Action
   const handleDelete = async (id) => {
-    // Avoid deleting hardcoded mockups
-    if (id <= 5) {
-      setTransactions(transactions.filter(t => t.id !== id));
-      return;
-    }
-
     try {
       await transactionService.deleteTransaction(id);
       loadTransactionsData();
@@ -181,29 +173,8 @@ export default function TransactionsManager({ searchQuery }) {
   const handleEditSubmit = async (txnData) => {
     if (!selectedTxn) return;
 
-    // Simulate mock update locally if mock id
-    if (selectedTxn.id <= 5) {
-      setTransactions(transactions.map(t => t.id === selectedTxn.id ? {
-        ...t,
-        amount: txnData.amount,
-        type: txnData.type,
-        category: txnData.category.toUpperCase(),
-        description: txnData.description,
-      } : t));
-      setShowEditModal(false);
-      setSelectedTxn(null);
-      return;
-    }
-
     try {
-      await fetch(`http://localhost:8000/api/v1/transactions/${selectedTxn.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('capitallens_token')}`
-        },
-        body: JSON.stringify(txnData)
-      });
+      await transactionService.updateTransaction(selectedTxn.id, txnData);
       setShowEditModal(false);
       setSelectedTxn(null);
       loadTransactionsData();
@@ -526,21 +497,7 @@ export default function TransactionsManager({ searchQuery }) {
         </div>
       </section>
 
-      {/* Dynamic Automated Sync Ad Banner */}
-      <div className="relative rounded-2xl overflow-hidden border border-primary/20 bg-gradient-to-r from-surface-dim to-primary/5 p-8 flex items-center justify-between flex-col md:flex-row gap-6">
-        <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 70% 50%, rgba(90, 240, 179, 0.4) 0%, transparent 60%)' }}></div>
-        <div className="z-10 text-left">
-          <h3 className="font-headline-md text-headline-md text-primary mb-2 font-bold text-[24px]">Automate Your Ledger</h3>
-          <p className="text-on-surface-variant text-sm max-w-lg leading-relaxed">
-            Connect your crypto wallets and traditional banks via SecureSync API to automatically categorize and reconcile every cent across your global accounts.
-          </p>
-        </div>
-        <div className="z-10 w-full md:w-auto">
-          <button className="px-6 py-3 bg-primary text-on-primary font-bold rounded-xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20 w-full md:w-auto text-sm">
-            Enable Smart Sync
-          </button>
-        </div>
-      </div>
+
 
       {/* --- ADD TRANSACTION MODAL (Immersive Ledger Entry) --- */}
       <AddTransactionModal

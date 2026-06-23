@@ -1,6 +1,6 @@
 // Capitallens API Client with Mockup Fallbacks
 
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 // Token Management Helpers
 const getAuthToken = () => localStorage.getItem('capitallens_token');
@@ -23,6 +23,40 @@ const getHeaders = () => {
     'Content-Type': 'application/json',
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
   };
+};
+
+const parseErrorResponse = async (response) => {
+  let errMsg = 'API Request Failed';
+  try {
+    const text = await response.text();
+    if (text) {
+      errMsg = text;
+      try {
+        const data = JSON.parse(text);
+        if (data && data.detail) {
+          if (typeof data.detail === 'string') {
+            errMsg = data.detail;
+          } else if (Array.isArray(data.detail)) {
+            errMsg = data.detail.map(d => {
+              let msg = d.msg || '';
+              if (msg.startsWith('Value error, ')) {
+                msg = msg.substring('Value error, '.length);
+              }
+              if (msg.includes('value is not a valid email address')) {
+                return 'Please provide a valid email address';
+              }
+              return msg;
+            }).join(', ');
+          }
+        }
+      } catch (_) {
+        // Not a JSON string, keep raw text
+      }
+    }
+  } catch (err) {
+    console.error('Error reading response body:', err);
+  }
+  return errMsg;
 };
 
 // Generic Fetch Wrapper with Fallback Support
@@ -56,8 +90,8 @@ async function request(endpoint, options = {}, mockData = null) {
     }
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || 'API Request Failed');
+      const errMsg = await parseErrorResponse(response);
+      throw new Error(errMsg);
     }
 
     return await response.json();
@@ -92,12 +126,9 @@ export const authService = {
       });
       clearTimeout(tid);
 
-      if (response.status === 401) {
-        throw new Error('Invalid credentials');
-      }
       if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || 'Login failed');
+        const errMsg = await parseErrorResponse(response);
+        throw new Error(errMsg);
       }
 
       const data = await response.json();
@@ -124,12 +155,9 @@ export const authService = {
       });
       clearTimeout(tid);
 
-      if (response.status === 400) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Email already registered');
-      }
       if (!response.ok) {
-        throw new Error('Registration failed. Please try again.');
+        const errMsg = await parseErrorResponse(response);
+        throw new Error(errMsg);
       }
 
       const data = await response.json();
@@ -176,12 +204,14 @@ export const authService = {
 export const analyticsService = {
   getSummary: async () => {
     return request('/analytics/summary', {}, {
-      total_income: 1261042.00,
-      total_expense: 12450.00,
-      total_savings: 1248592.00,
-      savings_rate: 99.0,
-      burn_rate: 12450.00,
-      runway_months: 99.3,
+      total_income: 125000.00,
+      total_expense: 45000.00,
+      total_savings: 320000.00,
+      locked_savings: 200000.00,
+      available_cash: 120000.00,
+      savings_rate: 64.0,
+      burn_rate: 45000.00,
+      runway_months: 7.1,
       savings_rate_trend: 0.0,
       burn_rate_trend: 0.0,
       runway_trend: 0.0
@@ -362,14 +392,14 @@ export const analyticsService = {
     return request(`/analytics/by-category?scope=${scope}`, {}, {
       scope,
       expense_by_category: [
-        { category: 'Housing', amount: 4980.00 },
-        { category: 'Food', amount: 3112.50 },
-        { category: 'Transport', amount: 1245.00 },
-        { category: 'Other', amount: 3112.50 }
+        { category: 'Housing', amount: 18000.00 },
+        { category: 'Food', amount: 12000.00 },
+        { category: 'Transport', amount: 5000.00 },
+        { category: 'Other', amount: 10000.00 }
       ],
       income_by_category: [
-        { category: 'Investment', amount: 12000.00 },
-        { category: 'Salary', amount: 8000.00 }
+        { category: 'Salary', amount: 100000.00 },
+        { category: 'Investment', amount: 25000.00 }
       ]
     });
   },
@@ -392,31 +422,55 @@ export const analyticsService = {
       recent_transactions: [
         {
           id: '#TXN-9082-CS',
-          amount: 12450.00,
+          amount: 100000.00,
           type: 'income',
-          category: 'Tech Equity Index',
-          description: 'Executed trade',
-          date: 'Oct 24, 14:02'
+          category: 'Salary',
+          description: 'Monthly corporate salary',
+          date: 'Jun 22, 10:00'
         },
         {
           id: '#TXN-8812-CS',
-          amount: 1200.00,
-          type: 'expense',
-          category: 'Digital Collectible A',
-          description: 'Pending mint purchase',
-          date: 'Oct 24, 11:30'
+          amount: 25000.00,
+          type: 'income',
+          category: 'Investment',
+          description: 'Dividend payout',
+          date: 'Jun 21, 14:30'
         },
         {
           id: '#TXN-8745-CS',
+          amount: 18000.00,
+          type: 'expense',
+          category: 'Housing',
+          description: 'Apartment rent payout',
+          date: 'Jun 18, 09:15'
+        },
+        {
+          id: '#TXN-8630-CS',
+          amount: 12000.00,
+          type: 'expense',
+          category: 'Food',
+          description: 'Groceries & Dining',
+          date: 'Jun 15, 20:00'
+        },
+        {
+          id: '#TXN-8512-CS',
           amount: 5000.00,
-          type: 'income',
-          category: 'Liquid Cash Reserve',
-          description: 'Recurring auto transfer',
-          date: 'Oct 23, 16:45'
+          type: 'expense',
+          category: 'Transport',
+          description: 'Fuel & Commute',
+          date: 'Jun 12, 11:30'
+        },
+        {
+          id: '#TXN-8401-CS',
+          amount: 10000.00,
+          type: 'expense',
+          category: 'Other',
+          description: 'Weekend shopping & leisure',
+          date: 'Jun 10, 16:45'
         }
       ]
     });
-  }
+  },
 };
 
 // ─── SAVINGS GOALS SERVICES ──────────────────────────────────────────────────
@@ -509,6 +563,13 @@ export const transactionService = {
   createTransaction: async (txnData) => {
     return request('/transactions', {
       method: 'POST',
+      body: JSON.stringify(txnData)
+    });
+  },
+
+  updateTransaction: async (txnId, txnData) => {
+    return request(`/transactions/${txnId}`, {
+      method: 'PUT',
       body: JSON.stringify(txnData)
     });
   },
