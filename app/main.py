@@ -23,9 +23,36 @@ logger = logging.getLogger(__name__)
 # Create tables
 Base.metadata.create_all(bind=engine)
 
+def setup_indexes():
+    from sqlalchemy import text
+    try:
+        with engine.begin() as conn:
+            indexes_to_create = [
+                ("transactions", "idx_txn_user_id", "user_id"),
+                ("transactions", "idx_txn_date", "date"),
+                ("savings_goals", "idx_savings_user_id", "user_id"),
+                ("investments", "idx_investments_user_id", "user_id"),
+                ("savings_contributions", "idx_contrib_goal_id", "goal_id")
+            ]
+            for table, idx_name, column in indexes_to_create:
+                check_query = text(f"""
+                    SELECT COUNT(*) 
+                    FROM information_schema.statistics 
+                    WHERE table_schema = DATABASE() 
+                      AND table_name = '{table}' 
+                      AND index_name = '{idx_name}'
+                """)
+                res = conn.execute(check_query).scalar()
+                if res == 0:
+                    logger.info(f"Creating index {idx_name} on {table}({column})...")
+                    conn.execute(text(f"ALTER TABLE {table} ADD INDEX {idx_name} ({column})"))
+    except Exception as e:
+        logger.warning(f"Could not setup database indexes: {e}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 Starting Capitallens API")
+    setup_indexes()
     yield
     logger.info("🛑 Shutting down Capitallens API")
 

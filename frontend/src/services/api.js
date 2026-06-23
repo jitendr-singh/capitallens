@@ -110,7 +110,7 @@ async function request(endpoint, options = {}, mockData = null) {
 export const authService = {
   login: async (username, password) => {
     const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 8000);
+    const tid = setTimeout(() => controller.abort(), 60000);
     try {
       const formData = new URLSearchParams();
       formData.append('username', username);
@@ -145,7 +145,7 @@ export const authService = {
 
   register: async (name, email, password) => {
     const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 8000);
+    const tid = setTimeout(() => controller.abort(), 60000);
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',

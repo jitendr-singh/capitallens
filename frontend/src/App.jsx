@@ -527,9 +527,18 @@ export default function App() {
             )}
           </>
         ) : activeTab === 'analytics' ? (
-          <AnalyticsTab searchQuery={searchQuery} />
+          <AnalyticsTab 
+            searchQuery={searchQuery} 
+            initialSummary={summaryData}
+            initialSpendMix={spendMix}
+            initialRecentTransactions={recentTransactions}
+            onRefresh={fetchDashboardData}
+          />
         ) : activeTab === 'transactions' ? (
-          <TransactionsManager searchQuery={searchQuery} />
+          <TransactionsManager 
+            searchQuery={searchQuery} 
+            initialSummary={summaryData}
+          />
         ) : activeTab === 'savings' ? (
           <SavingsTab goals={savingsGoals} onRefresh={fetchDashboardData} searchQuery={searchQuery} />
         ) : activeTab === 'investments' ? (

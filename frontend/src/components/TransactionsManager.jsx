@@ -3,10 +3,14 @@ import { transactionService, analyticsService } from '../services/api';
 import AddTransactionModal from './AddTransactionModal';
 import { useCurrency } from '../context/CurrencyContext';
 
-export default function TransactionsManager({ searchQuery }) {
+export default function TransactionsManager({ searchQuery, initialSummary }) {
   const { formatCurrency, currencySymbol } = useCurrency();
   const [transactions, setTransactions] = useState([]);
-  const [summaryData, setSummaryData] = useState(null);
+  const [summaryData, setSummaryData] = useState(initialSummary);
+
+  useEffect(() => {
+    if (initialSummary) setSummaryData(initialSummary);
+  }, [initialSummary]);
   const [loading, setLoading] = useState(true);
 
   // Filter States
@@ -86,7 +90,7 @@ export default function TransactionsManager({ searchQuery }) {
     setLoading(true);
     try {
       const [summary, list] = await Promise.all([
-        analyticsService.getSummary(),
+        initialSummary ? Promise.resolve(initialSummary) : analyticsService.getSummary(),
         transactionService.getTransactions({ limit: 100 })
       ]);
 

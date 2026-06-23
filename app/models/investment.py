@@ -12,7 +12,7 @@ class Investment(Base):
     __tablename__ = "investments"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     
     asset_name = Column(String(255), nullable=False)
     asset_type = Column(String(50), nullable=False) # 'stocks', 'fixed_deposit', 'mutual_funds', 'gold', 'govt_schemes', 'real_estate'

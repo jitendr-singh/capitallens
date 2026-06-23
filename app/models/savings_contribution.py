@@ -7,7 +7,7 @@ class SavingsContribution(Base):
     __tablename__ = "savings_contributions"
 
     id = Column(Integer, primary_key=True, index=True)
-    goal_id = Column(Integer, ForeignKey("savings_goals.id"), nullable=False)
+    goal_id = Column(Integer, ForeignKey("savings_goals.id"), nullable=False, index=True)
     
     # Positive for deposits, negative for withdrawals/adjustments
     amount = Column(Float, nullable=False)

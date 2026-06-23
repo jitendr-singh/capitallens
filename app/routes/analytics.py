@@ -21,6 +21,8 @@ async def get_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    from sqlalchemy import case, and_
+    
     now = datetime.utcnow()
     # Start of this month
     this_month_start = datetime(now.year, now.month, 1)
@@ -33,57 +35,39 @@ async def get_summary(
         last_month_start = datetime(now.year, now.month - 1, 1)
         last_month_end = this_month_start - timedelta(seconds=1)
 
-    # 1. Overall / Cumulative Metrics (All-time totals)
-    total_income = db.query(func.sum(Transaction.amount)).filter(
-        Transaction.user_id == current_user.id,
-        Transaction.type == TransactionType.income
-    ).scalar() or 0.0
+    # 1. Combined database aggregation using conditional statements
+    totals_query = db.query(
+        func.sum(case((Transaction.type == TransactionType.income, Transaction.amount), else_=0.0)).label("total_income"),
+        func.sum(case((Transaction.type == TransactionType.expense, Transaction.amount), else_=0.0)).label("total_expense"),
+        func.sum(case((and_(Transaction.type == TransactionType.income, Transaction.date >= this_month_start), Transaction.amount), else_=0.0)).label("this_month_income"),
+        func.sum(case((and_(Transaction.type == TransactionType.expense, Transaction.date >= this_month_start), Transaction.amount), else_=0.0)).label("this_month_expense"),
+        func.sum(case((and_(Transaction.type == TransactionType.income, Transaction.date >= last_month_start, Transaction.date <= last_month_end), Transaction.amount), else_=0.0)).label("last_month_income"),
+        func.sum(case((and_(Transaction.type == TransactionType.expense, Transaction.date >= last_month_start, Transaction.date <= last_month_end), Transaction.amount), else_=0.0)).label("last_month_expense"),
+        func.sum(case((Transaction.date >= this_month_start, 1), else_=0)).label("this_month_txns"),
+        func.count(Transaction.id).label("transaction_count"),
+        func.min(Transaction.date).label("first_txn_date")
+    ).filter(
+        Transaction.user_id == current_user.id
+    ).first()
 
-    total_expense = db.query(func.sum(Transaction.amount)).filter(
-        Transaction.user_id == current_user.id,
-        Transaction.type == TransactionType.expense
-    ).scalar() or 0.0
+    total_income = float(totals_query.total_income or 0.0)
+    total_expense = float(totals_query.total_expense or 0.0)
+    this_month_inc = float(totals_query.this_month_income or 0.0)
+    this_month_exp = float(totals_query.this_month_expense or 0.0)
+    last_month_inc = float(totals_query.last_month_income or 0.0)
+    last_month_exp = float(totals_query.last_month_expense or 0.0)
+    this_month_txns = int(totals_query.this_month_txns or 0)
+    transaction_count = int(totals_query.transaction_count or 0)
+    first_txn_date = totals_query.first_txn_date
 
     total_savings = round(total_income - total_expense, 2)
-
-    # 2. This Month Metrics
-    this_month_inc = db.query(func.sum(Transaction.amount)).filter(
-        Transaction.user_id == current_user.id,
-        Transaction.type == TransactionType.income,
-        Transaction.date >= this_month_start
-    ).scalar() or 0.0
-
-    this_month_exp = db.query(func.sum(Transaction.amount)).filter(
-        Transaction.user_id == current_user.id,
-        Transaction.type == TransactionType.expense,
-        Transaction.date >= this_month_start
-    ).scalar() or 0.0
-
     this_month_sav = this_month_inc - this_month_exp
     this_month_savings_rate = round((this_month_sav / this_month_inc * 100), 2) if this_month_inc > 0 else 0.0
-
-    # 3. Last Month Metrics
-    last_month_inc = db.query(func.sum(Transaction.amount)).filter(
-        Transaction.user_id == current_user.id,
-        Transaction.type == TransactionType.income,
-        Transaction.date >= last_month_start,
-        Transaction.date <= last_month_end
-    ).scalar() or 0.0
-
-    last_month_exp = db.query(func.sum(Transaction.amount)).filter(
-        Transaction.user_id == current_user.id,
-        Transaction.type == TransactionType.expense,
-        Transaction.date >= last_month_start,
-        Transaction.date <= last_month_end
-    ).scalar() or 0.0
-
+    
     last_month_sav = last_month_inc - last_month_exp
     last_month_savings_rate = round((last_month_sav / last_month_inc * 100), 2) if last_month_inc > 0 else 0.0
 
     # Calculate average monthly expense (burn rate) fallback for runway
-    first_txn_date = db.query(func.min(Transaction.date)).filter(
-        Transaction.user_id == current_user.id
-    ).scalar()
     if first_txn_date:
         months_diff = (now.year - first_txn_date.year) * 12 + (now.month - first_txn_date.month) + 1
         avg_monthly_exp = total_expense / max(months_diff, 1)
@@ -91,7 +75,6 @@ async def get_summary(
         avg_monthly_exp = 0.0
 
     # 4. Runway Calculations
-    # Current Runway = Total Savings so far / Current Month's Burn Rate (Expense)
     if this_month_exp > 0:
         current_runway = round(total_savings / this_month_exp, 1)
     elif last_month_exp > 0:
@@ -101,7 +84,6 @@ async def get_summary(
     else:
         current_runway = 99.0 if total_savings > 0 else 0.0
     
-    # Last Month Runway = Savings up to last month / Last Month's Burn Rate (Expense)
     savings_up_to_last_month = total_savings - this_month_sav
     if last_month_exp > 0:
         last_month_runway = round(savings_up_to_last_month / last_month_exp, 1)
@@ -111,25 +93,20 @@ async def get_summary(
         last_month_runway = 99.0 if savings_up_to_last_month > 0 else 0.0
 
     # 5. Trend Calculations
-    # Income Trend (% Change)
     if last_month_inc > 0:
         income_trend = round(((this_month_inc - last_month_inc) / last_month_inc * 100), 2)
     else:
         income_trend = 0.0
 
-    # Burn Rate Trend (% Change)
     if last_month_exp > 0:
         burn_rate_trend = round(((this_month_exp - last_month_exp) / last_month_exp * 100), 2)
     else:
         burn_rate_trend = 0.0
 
-    # Savings Rate Trend (Absolute Difference)
     savings_rate_trend = round(this_month_savings_rate - last_month_savings_rate, 2)
-
-    # Runway Trend (Absolute Difference in months)
     runway_trend = round(current_runway - last_month_runway, 1)
 
-    # 6. Savings Goals lock & Available cash breakout
+    # 6. Savings Goals lock
     locked_savings = db.query(func.sum(SavingsGoal.saved_amount)).filter(
         SavingsGoal.user_id == current_user.id
     ).scalar() or 0.0

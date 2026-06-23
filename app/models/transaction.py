@@ -12,12 +12,12 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     amount = Column(Float, nullable=False)
     type = Column(Enum(TransactionType), nullable=False)
     category = Column(String(100), nullable=False)
     description = Column(String(255), nullable=True)
-    date = Column(DateTime, default=datetime.utcnow)
+    date = Column(DateTime, default=datetime.utcnow, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

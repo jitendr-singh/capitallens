@@ -2,10 +2,16 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { analyticsService } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
 
-export default function AnalyticsTab({ searchQuery }) {
+export default function AnalyticsTab({ 
+  searchQuery, 
+  initialSummary, 
+  initialSpendMix, 
+  initialRecentTransactions,
+  onRefresh 
+}) {
   const { formatCurrency, currencySymbol } = useCurrency();
   // Summary Stats States
-  const [summary, setSummary] = useState({
+  const [summary, setSummary] = useState(initialSummary || {
     total_income: 0.0,
     total_expense: 0.0,
     total_savings: 0.0,
@@ -134,10 +140,10 @@ export default function AnalyticsTab({ searchQuery }) {
   };
 
   // Category Breakdown state
-  const [categoryBreakdown, setCategoryBreakdown] = useState([]);
+  const [categoryBreakdown, setCategoryBreakdown] = useState(initialSpendMix?.expense_by_category || []);
 
   // Recent Transactions list
-  const [recentTxns, setRecentTxns] = useState([]);
+  const [recentTxns, setRecentTxns] = useState(initialRecentTransactions || []);
 
   // Chart hover interaction tooltip state
   const [hoveredIndex, setHoveredIndex] = useState(null);
@@ -261,9 +267,26 @@ export default function AnalyticsTab({ searchQuery }) {
     }
   }, []);
 
+  // Sync local states with props when props change (from parent updates)
   useEffect(() => {
-    fetchSummaryAndBreakdown();
-  }, [fetchSummaryAndBreakdown]);
+    if (initialSummary) setSummary(initialSummary);
+  }, [initialSummary]);
+
+  useEffect(() => {
+    if (initialSpendMix?.expense_by_category) {
+      setCategoryBreakdown(initialSpendMix.expense_by_category);
+    }
+  }, [initialSpendMix]);
+
+  useEffect(() => {
+    if (initialRecentTransactions) setRecentTxns(initialRecentTransactions);
+  }, [initialRecentTransactions]);
+
+  useEffect(() => {
+    if (!initialSummary || !initialSpendMix || !initialRecentTransactions) {
+      fetchSummaryAndBreakdown();
+    }
+  }, [initialSummary, initialSpendMix, initialRecentTransactions, fetchSummaryAndBreakdown]);
 
   // ─── Fetch Range Data (Chart) ───
   const fetchRangeData = useCallback(async () => {
