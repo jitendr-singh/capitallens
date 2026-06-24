@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     def assemble_db_url(self) -> "Settings":
         if not self.DATABASE_URL:
             self.DATABASE_URL = (
-                f"mysql+mysqlconnector://{self.DATABASE_USER}:{self.DATABASE_PASSWORD}"
+                f"mysql+pymysql://{self.DATABASE_USER}:{self.DATABASE_PASSWORD}"
                 f"@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_NAME}"
             )
         return self

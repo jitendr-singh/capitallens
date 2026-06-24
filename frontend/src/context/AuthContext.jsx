@@ -45,9 +45,13 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const session = await authService.login(email, password);
-      setUser(session.user);
-      return session.user;
+      // Backend returns { access_token, token_type } — no user object
+      // Token is saved inside authService.login via setAuthToken()
+      await authService.login(email, password);
+      // Now fetch the real user profile
+      const profile = await authService.getCurrentUser();
+      setUser(profile);
+      return profile;
     } catch (error) {
       throw error;
     }
@@ -55,9 +59,13 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password) => {
     try {
-      const session = await authService.register(name, email, password);
-      setUser(session.user);
-      return session.user;
+      // Backend returns { access_token, token_type } — no user object
+      // Token is saved inside authService.register via setAuthToken()
+      await authService.register(name, email, password);
+      // Now fetch the real user profile
+      const profile = await authService.getCurrentUser();
+      setUser(profile);
+      return profile;
     } catch (error) {
       throw error;
     }
